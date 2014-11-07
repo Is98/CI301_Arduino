@@ -86,19 +86,23 @@ void loop() {
 
   if (scheduler < 1) {
     WebServer();
-  } else 
-  if (scheduler == 1 || ((scheduler > 1) && (scheduler < 2)) ) {
+  } 
+  else 
+    if (scheduler == 1 || ((scheduler > 1) && (scheduler < 2)) ) {
     DHT.read11(dht1);
     sendReadings(1, DHT.humidity, DHT.temperature);
-  } else 
-  if (scheduler == 2 || ((scheduler > 2) && (scheduler < 3)) ) {
+  } 
+  else 
+    if (scheduler == 2 || ((scheduler > 2) && (scheduler < 3)) ) {
     DHT.read11(dht2);
     sendReadings(2, DHT.humidity, DHT.temperature);
-  } else 
-  if (scheduler == 3 || ((scheduler > 3) && (scheduler < 4)) ) {
+  } 
+  else 
+    if (scheduler == 3 || ((scheduler > 3) && (scheduler < 4)) ) {
     DHT.read11(dht3);
     sendReadings(3, DHT.humidity, DHT.temperature);
-  } else {
+  } 
+  else {
     DHT.read11(dht4);
     sendReadings(4, DHT.humidity, DHT.temperature);
   }
@@ -113,7 +117,7 @@ void WebServer() {
   // Progress scheduler
   scheduler += 0.001;
   Serial.print("Broadcasting ! ");
-  
+
   // listen for incoming clients
   EthernetClient client = server.available();
   if (client) {
@@ -256,6 +260,7 @@ void sendReadings(int sensornum, int humidity, int temp) {
     scheduler++;
   }
 }
+
 
 
 
