@@ -121,7 +121,7 @@ void WebServer() {
   // listen for incoming clients
   EthernetClient client = server.available();
   if (client) {
-    Serial.println("New client");
+    Serial.println("new client");
     // an http request ends with a blank line
     boolean currentLineIsBlank = true;
     while (client.connected()) {
@@ -136,7 +136,7 @@ void WebServer() {
           client.println("HTTP/1.1 200 OK");
           client.println("Content-Type: text/html");
           client.println("Connection: close");  // the connection will be closed after completion of the response
-          client.println("Refresh: 60");  // refresh the page automatically
+          client.println("Refresh: 60");  // refresh the page automatically every 5 sec
           client.println();
           //and metadata...
           client.println("<!DOCTYPE HTML>");
@@ -180,8 +180,7 @@ void WebServer() {
           client.print(DHT.humidity);
           client.print("%.  <br /><br />   Temperature <br /> ");
           client.print(DHT.temperature);
-          client.println("C </reading>");   
-
+          client.println("C </reading>");      
 
           DHT.read11(dht2);
           client.print("<reading><h1>");
@@ -224,12 +223,12 @@ void WebServer() {
           currentLineIsBlank = false;
         }
       }
-      // give the web browser time to receive the data
-      delay(10);
-      // close the connection:
-      client.stop();
-      Serial.println("client disonnected");
     }
+    // give the web browser time to receive the data
+    delay(1);
+    // close the connection:
+    client.stop();
+    Serial.println("client disonnected");
   }
 }
 
