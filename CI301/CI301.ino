@@ -19,7 +19,8 @@
 dht DHT;
 
 int scheduler = 0;
-int web_priority = 1000;
+int web_priority = 10000; // 1000 is one second
+
 //Sensor Nicknames
 String dht1NN = "Ambient Soil";
 String dht2NN = "Outer Hood";
@@ -114,13 +115,11 @@ void loop() {
 
 
 void WebServer() {
-  Serial.print("Broadcasting ! ");
+  Serial.println("Broadcasting ! ");
 
   // Progress scheduler
-  for (int webtimeslice = 0; webtimeslice < web_priority; webtimeslice ++)
+  for (int webtimeslice = 0; webtimeslice < web_priority; webtimeslice++) 
   {
-
-
     // listen for incoming clients
     EthernetClient client = server.available();
     if (client) {
@@ -233,7 +232,9 @@ void WebServer() {
       client.stop();
       Serial.println("client disonnected");
     }
+  delay(1);
   }
+  scheduler += 1;
 }
 
 
@@ -253,10 +254,9 @@ void sendReadings(int sensornum, int humidity, int temp) {
 
   /* run the SQL query */
   my_conn.cmd_query(SQL_SEND_READINGS);
-  Serial.println("SEND Query Success!");
 
   //
-  if (scheduler > 4) {
+  if (scheduler == 4) {
     scheduler = 0;
   } 
   else {
