@@ -17,8 +17,9 @@
 #define Relay4 5
 
 dht DHT;
-float scheduler = 0;
 
+int scheduler = 0;
+int web_priority = 1000;
 //Sensor Nicknames
 String dht1NN = "Ambient Soil";
 String dht2NN = "Outer Hood";
@@ -84,27 +85,26 @@ void setup() {
 
 void loop() {
 
-  if (scheduler < 1) {
+  switch (scheduler) {
+
+  case 0:
     WebServer();
-  } 
-  else 
-    if (scheduler == 1 || ((scheduler > 1) && (scheduler < 2)) ) {
+    break;
+  case 1:
     DHT.read11(dht1);
     sendReadings(1, DHT.humidity, DHT.temperature);
-  } 
-  else 
-    if (scheduler == 2 || ((scheduler > 2) && (scheduler < 3)) ) {
+    break;
+  case 2:
     DHT.read11(dht2);
     sendReadings(2, DHT.humidity, DHT.temperature);
-  } 
-  else 
-    if (scheduler == 3 || ((scheduler > 3) && (scheduler < 4)) ) {
+    break;
+  case 3:
     DHT.read11(dht3);
     sendReadings(3, DHT.humidity, DHT.temperature);
-  } 
-  else {
+  case 4:
     DHT.read11(dht4);
     sendReadings(4, DHT.humidity, DHT.temperature);
+
   }
 
 }
@@ -114,121 +114,125 @@ void loop() {
 
 
 void WebServer() {
-  // Progress scheduler
-  scheduler += 0.001;
   Serial.print("Broadcasting ! ");
 
-  // listen for incoming clients
-  EthernetClient client = server.available();
-  if (client) {
-    Serial.println("new client");
-    // an http request ends with a blank line
-    boolean currentLineIsBlank = true;
-    while (client.connected()) {
-      if (client.available()) {
-        char c = client.read();
-        Serial.write(c);
-        // if you've gotten to the end of the line (received a newline
-        // character) and the line is blank, the http request has ended,
-        // so you can send a reply
-        if (c == '\n' && currentLineIsBlank) {
-          // send a standard http response header
-          client.println("HTTP/1.1 200 OK");
-          client.println("Content-Type: text/html");
-          client.println("Connection: close");  // the connection will be closed after completion of the response
-          client.println("Refresh: 60");  // refresh the page automatically every 5 sec
-          client.println();
-          //and metadata...
-          client.println("<!DOCTYPE HTML>");
-          client.println("<html>");
-          client.println("<head>");
-          client.println("<title>Environment Live Times</title>");
-          //and CSS style data...
-          client.println("<style type=\"text/css\">");
-          client.println("container {");
-          client.println("position: relative;");
-          client.println("width: 400px;");
-          client.println("margin-left:auto;");
-          client.println("margin-right:auto;");
-          client.println("}");
-          client.println("reading {");
-          client.println("float: left;");
-          client.println("width: 100px;");
-          client.println("font-family: \"MS Serif\", \"New York\", serif;");
-          client.println("font-size: 12px;");
-          client.println("text-align: center;");
-          client.println("padding: 20px, 20px. 20px, 20px;");
-          client.println("}");
-          client.println("reading h1 {");
-          client.println("font-family: Georgia, \"Times New Roman\", Times, serif;");
-          client.println("font-size: 14px;");
-          client.println("font-style: oblique;");
-          client.println("}");
+  // Progress scheduler
+  for (int webtimeslice = 0; webtimeslice < web_priority; webtimeslice ++)
+  {
 
-          client.println("</style>");
-          client.println("</head>");
-          //and body content.
-          client.println("<body>");
-          client.println("<container>");
 
-          // output the value of each sensor
+    // listen for incoming clients
+    EthernetClient client = server.available();
+    if (client) {
+      Serial.println("new client");
+      // an http request ends with a blank line
+      boolean currentLineIsBlank = true;
+      while (client.connected()) {
+        if (client.available()) {
+          char c = client.read();
+          Serial.write(c);
+          // if you've gotten to the end of the line (received a newline
+          // character) and the line is blank, the http request has ended,
+          // so you can send a reply
+          if (c == '\n' && currentLineIsBlank) {
+            // send a standard http response header
+            client.println("HTTP/1.1 200 OK");
+            client.println("Content-Type: text/html");
+            client.println("Connection: close");  // the connection will be closed after completion of the response
+            client.println("Refresh: 60");  // refresh the page automatically every 5 sec
+            client.println();
+            //and metadata...
+            client.println("<!DOCTYPE HTML>");
+            client.println("<html>");
+            client.println("<head>");
+            client.println("<title>Environment Live Times</title>");
+            //and CSS style data...
+            client.println("<style type=\"text/css\">");
+            client.println("container {");
+            client.println("position: relative;");
+            client.println("width: 400px;");
+            client.println("margin-left:auto;");
+            client.println("margin-right:auto;");
+            client.println("}");
+            client.println("reading {");
+            client.println("float: left;");
+            client.println("width: 100px;");
+            client.println("font-family: \"MS Serif\", \"New York\", serif;");
+            client.println("font-size: 12px;");
+            client.println("text-align: center;");
+            client.println("padding: 20px, 20px. 20px, 20px;");
+            client.println("}");
+            client.println("reading h1 {");
+            client.println("font-family: Georgia, \"Times New Roman\", Times, serif;");
+            client.println("font-size: 14px;");
+            client.println("font-style: oblique;");
+            client.println("}");
 
-          DHT.read11(dht1);
-          client.print("<reading><h1>");
-          client.print(dht1NN);
-          client.print("</h1> <br /> Humidity <br /> ");
-          client.print(DHT.humidity);
-          client.print("%.  <br /><br />   Temperature <br /> ");
-          client.print(DHT.temperature);
-          client.println("C </reading>");      
+            client.println("</style>");
+            client.println("</head>");
+            //and body content.
+            client.println("<body>");
+            client.println("<container>");
 
-          DHT.read11(dht2);
-          client.print("<reading><h1>");
-          client.print(dht2NN);
-          client.print("</h1> <br /> Humidity <br /> ");
-          client.print(DHT.humidity);
-          client.print("%.  <br /><br />   Temperature <br /> ");
-          client.print(DHT.temperature);
-          client.println("C </reading>");    
+            // output the value of each sensor
 
-          DHT.read11(dht3);
-          client.print("<reading><h1>");
-          client.print(dht3NN);
-          client.print("</h1> <br /> Humidity <br /> ");
-          client.print(DHT.humidity);
-          client.print("%.  <br /><br />   Temperature <br /> ");
-          client.print(DHT.temperature);
-          client.println("C </reading>");    
+            DHT.read11(dht1);
+            client.print("<reading><h1>");
+            client.print(dht1NN);
+            client.print("</h1> <br /> Humidity <br /> ");
+            client.print(DHT.humidity);
+            client.print("%.  <br /><br />   Temperature <br /> ");
+            client.print(DHT.temperature);
+            client.println("C </reading>");      
 
-          DHT.read11(dht4);
-          client.print("<reading><h1>");
-          client.print(dht4NN);
-          client.print("</h1> <br /> Humidity <br /> ");
-          client.print(DHT.humidity);
-          client.print("%.  <br /><br />   Temperature <br /> ");
-          client.print(DHT.temperature);
-          client.println("C </reading>");    
-          client.println("</container>");
+            DHT.read11(dht2);
+            client.print("<reading><h1>");
+            client.print(dht2NN);
+            client.print("</h1> <br /> Humidity <br /> ");
+            client.print(DHT.humidity);
+            client.print("%.  <br /><br />   Temperature <br /> ");
+            client.print(DHT.temperature);
+            client.println("C </reading>");    
 
-          client.println("</body>");
-          client.println("</html>");
-          break;
-        }
-        if (c == '\n') {
-          // you're starting a new line
-          currentLineIsBlank = true;
-        } 
-        else if (c != '\r') {
-          // you've gotten a character on the current line
-          currentLineIsBlank = false;
+            DHT.read11(dht3);
+            client.print("<reading><h1>");
+            client.print(dht3NN);
+            client.print("</h1> <br /> Humidity <br /> ");
+            client.print(DHT.humidity);
+            client.print("%.  <br /><br />   Temperature <br /> ");
+            client.print(DHT.temperature);
+            client.println("C </reading>");    
+
+            DHT.read11(dht4);
+            client.print("<reading><h1>");
+            client.print(dht4NN);
+            client.print("</h1> <br /> Humidity <br /> ");
+            client.print(DHT.humidity);
+            client.print("%.  <br /><br />   Temperature <br /> ");
+            client.print(DHT.temperature);
+            client.println("C </reading>");    
+            client.println("</container>");
+
+            client.println("</body>");
+            client.println("</html>");
+            break;
+          }
+          if (c == '\n') {
+            // you're starting a new line
+            currentLineIsBlank = true;
+          } 
+          else if (c != '\r') {
+            // you've gotten a character on the current line
+            currentLineIsBlank = false;
+          }
         }
       }
+      // give the web browser time to receive the data
+      delay(1);
+      // close the connection:
+      client.stop();
+      Serial.println("client disonnected");
     }
-    // give the web browser time to receive the data
-    delay(1);
-    // close the connection:
-    client.stop();
-    Serial.println("client disonnected");
   }
 }
 
@@ -259,6 +263,9 @@ void sendReadings(int sensornum, int humidity, int temp) {
     scheduler++;
   }
 }
+
+
+
 
 
 
