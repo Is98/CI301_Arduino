@@ -17,7 +17,7 @@
 #define Relay4 5
 
 dht DHT;
-int scheduler = 0;
+float scheduler = 0;
 
 //Sensor Nicknames
 String dht1NN = "Ambient Soil";
@@ -84,31 +84,23 @@ void setup() {
 
 void loop() {
 
-  switch(scheduler) {
-
-  case 0:
+  if (scheduler < 1) {
     WebServer();
-    break;
-
-  case 1:
+  } else 
+  if (scheduler == 1 || ((scheduler > 1) && (scheduler < 2)) ) {
     DHT.read11(dht1);
     sendReadings(1, DHT.humidity, DHT.temperature);
-    break;
-
-  case 2:
+  } else 
+  if (scheduler == 2 || ((scheduler > 2) && (scheduler < 3)) ) {
     DHT.read11(dht2);
     sendReadings(2, DHT.humidity, DHT.temperature);
-    break;
-
-  case 3:
+  } else 
+  if (scheduler == 3 || ((scheduler > 3) && (scheduler < 4)) ) {
     DHT.read11(dht3);
     sendReadings(3, DHT.humidity, DHT.temperature);
-    break;
-
-  case 4:
+  } else {
     DHT.read11(dht4);
     sendReadings(4, DHT.humidity, DHT.temperature);
-    break;
   }
 
 }
@@ -119,8 +111,8 @@ void loop() {
 
 void WebServer() {
   // Progress scheduler
-  scheduler++;
-  Serial.println("Broadcasting webserver");
+  scheduler += 0.001;
+  Serial.print("Broadcasting ! ");
   
   // listen for incoming clients
   EthernetClient client = server.available();
@@ -257,14 +249,13 @@ void sendReadings(int sensornum, int humidity, int temp) {
   Serial.println("SEND Query Success!");
 
   //
-  if (scheduler > 3) {
+  if (scheduler > 4) {
     scheduler = 0;
   } 
   else {
     scheduler++;
   }
 }
-
 
 
 
