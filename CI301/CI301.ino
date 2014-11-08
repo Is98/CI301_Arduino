@@ -19,7 +19,7 @@
 dht DHT;
 
 int scheduler = 0;
-int web_priority = 32700; // 10000 is around 13 seconds. Max 32750 = 40 seconds
+int web_priority = 10000; // 10000 is around 13 seconds. Max 32750 = 40 seconds
 
 int relay1_on_temp = 23;
 int relay1_off_temp = 20;
@@ -94,7 +94,8 @@ void loop() {
   switch (scheduler) {
 
   case 0:
-    WebServer();
+    scheduler = 5;
+    //WebServer();
     break;
   case 1:
     DHT.read11(dht1);
@@ -251,9 +252,10 @@ void WebServer() {
 
 void sendReadings(int sensornum, int humidity, int temp) { 
   //tell the serial monitor what we're doing.
-  char printf1[50];
+  /* char printf1[50];
   sprintf(printf1, "TRYING TO INSERT SQL TO '%d', '%d', '%d'", sensornum, humidity, temp);
-  Serial.println(printf1);
+  Serial.println(printf1); */
+  Serial.print("- SQL INSERT -");
 
   //build the query, correcting any variable usage/data type issues
   char SQL_SEND_READINGS[100];
@@ -282,19 +284,16 @@ void relaySwitch() {
   
   if (DHT.temperature > relay1_on_temp) {
     digitalWrite(Relay1, LOW);
-    char Warning[36];
-    sprintf(Warning, " - Turning Relay 1 ON at %d degrees C", DHT.temperature);
-    Serial.print(Warning);
+    Serial.print(" - Turning Relay 1 ON");
   } else if (DHT.temperature < relay1_off_temp) {
     digitalWrite(Relay1, HIGH);
-    char Warning[36];
-    sprintf(Warning, " - Turning Relay 1 OFF at %d degrees C", DHT.temperature);
-    Serial.print(Warning);
+    Serial.print(" - Turning Relay 1 OFF at %d degrees C");
   } else {
     Serial.print(" - I'm toasty warm");
   }
   Serial.println();
 }
+
 
 
 
