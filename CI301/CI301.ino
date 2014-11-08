@@ -21,6 +21,11 @@ dht DHT;
 int scheduler = 0;
 int web_priority = 32700; // 10000 is around 13 seconds. Max 32750 = 40 seconds
 
+int relay1_on_temp = 23;
+int relay1_off_temp = 20;
+#define relay1_dht = A2;
+
+
 //Sensor Nicknames
 String dht1NN = "Ambient Soil";
 String dht2NN = "Outer Hood";
@@ -71,7 +76,7 @@ void setup() {
   //Test mysql connection by adding a poweron record
   if (my_conn.mysql_connect(addr_mysql, 3306, user, password))
   {
-    delay(500);
+    //delay(500);
     /* run the SQL query */
     my_conn.cmd_query(SQL_POWERON_TEST);
     Serial.println("Query Success!");
@@ -105,7 +110,9 @@ void loop() {
   case 4:
     DHT.read11(dht4);
     sendReadings(4, DHT.humidity, DHT.temperature);
-
+  case 5:
+    relaySwitch();
+    
   }
 
 }
@@ -266,7 +273,28 @@ void sendReadings(int sensornum, int humidity, int temp) {
 
 
 
-
+void relaySwitch() {
+  /* DHT.read11(relay1_dht);
+  Serial.println(relay1_dht); */
+  
+  DHT.read11(dht3);
+  Serial.print(DHT.temperature);
+  
+  if (DHT.temperature > relay1_on_temp) {
+    digitalWrite(Relay1, LOW);
+    char Warning[36];
+    sprintf(Warning, " - Turning Relay 1 ON at %d degrees C", DHT.temperature);
+    Serial.print(Warning);
+  } else if (DHT.temperature < relay1_off_temp) {
+    digitalWrite(Relay1, HIGH);
+    char Warning[36];
+    sprintf(Warning, " - Turning Relay 1 OFF at %d degrees C", DHT.temperature);
+    Serial.print(Warning);
+  } else {
+    Serial.print(" - I'm toasty warm");
+  }
+  Serial.println();
+}
 
 
 
