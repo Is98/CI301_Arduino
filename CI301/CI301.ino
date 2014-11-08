@@ -19,8 +19,8 @@
 dht DHT;
 
 int scheduler = 0;
-int previousScheduler = 5;
-int web_priority = 10000; // 10000 is around 13 seconds. Max 32750 = 40 seconds
+int previousScheduler = 4;
+int web_priority = 25000; // 10000 is around 13 seconds. Max 32750 = 40 seconds
 
 int relay1_on_temp = 23;
 
@@ -98,21 +98,23 @@ void loop() {
   case 1:
     DHT.read11(dht1);
     sendReadings(1, DHT.humidity, DHT.temperature);
+    relaySwitch();
     break;
   case 2:
     DHT.read11(dht2);
     sendReadings(2, DHT.humidity, DHT.temperature);
+    relaySwitch();
     break;
   case 3:
     DHT.read11(dht3);
     sendReadings(3, DHT.humidity, DHT.temperature);
+    relaySwitch();
+    break;
   case 4:
     DHT.read11(dht4);
     sendReadings(4, DHT.humidity, DHT.temperature);
-  case 5:
     relaySwitch();
-  }
-
+    break;
 }
 
 
@@ -239,7 +241,7 @@ void WebServer() {
     }
     delay(1);
   }
-  if (previousScheduler == 5) {
+  if (previousScheduler == 4) {
     previousScheduler = 0;
   }
   scheduler = previousScheduler + 1;
@@ -308,8 +310,6 @@ void relaySwitch() {
     Serial.print("OUTLYING TEMPERATURE - "); 
     Serial.println(temp);
   }
-  scheduler = 0;
-  previousScheduler = 5;
 }
 
 
