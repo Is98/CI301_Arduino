@@ -309,6 +309,7 @@ void relaySwitch() {
     Serial.println(temp);
   }
   scheduler = 0;
+  previousScheduler = 5;
 }
 
 
