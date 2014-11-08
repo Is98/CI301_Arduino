@@ -22,8 +22,6 @@ int scheduler = 0;
 int web_priority = 10000; // 10000 is around 13 seconds. Max 32750 = 40 seconds
 
 int relay1_on_temp = 23;
-int relay1_off_temp = 20;
-#define relay1_dht = A2;
 
 
 //Sensor Nicknames
@@ -76,7 +74,7 @@ void setup() {
   //Test mysql connection by adding a poweron record
   if (my_conn.mysql_connect(addr_mysql, 3306, user, password))
   {
-    //delay(500);
+    delay(5);
     /* run the SQL query */
     my_conn.cmd_query(SQL_POWERON_TEST);
     Serial.println("Query Success!");
@@ -94,8 +92,7 @@ void loop() {
   switch (scheduler) {
 
   case 0:
-    scheduler = 5;
-    //WebServer();
+    WebServer();
     break;
   case 1:
     DHT.read11(dht1);
@@ -113,7 +110,6 @@ void loop() {
     sendReadings(4, DHT.humidity, DHT.temperature);
   case 5:
     relaySwitch();
-    delay(10000);
   }
 
 }
@@ -240,7 +236,7 @@ void WebServer() {
       client.stop();
       Serial.println("client disonnected");
     }
-  delay(1);
+    delay(1);
   }
   scheduler += 1;
 }
@@ -253,8 +249,8 @@ void WebServer() {
 void sendReadings(int sensornum, int humidity, int temp) { 
   //tell the serial monitor what we're doing.
   /* char printf1[50];
-  sprintf(printf1, "TRYING TO INSERT SQL TO '%d', '%d', '%d'", sensornum, humidity, temp);
-  Serial.println(printf1); */
+   sprintf(printf1, "TRYING TO INSERT SQL TO '%d', '%d', '%d'", sensornum, humidity, temp);
+   Serial.println(printf1); */
   Serial.print("- SQL INSERT -");
 
   //build the query, correcting any variable usage/data type issues
@@ -277,26 +273,41 @@ void sendReadings(int sensornum, int humidity, int temp) {
 
 void relaySwitch() {
   /* DHT.read11(relay1_dht);
-  Serial.println(relay1_dht); */
-  
+   Serial.println(relay1_dht); */
+
   DHT.read11(dht3);
-  Serial.print(DHT.temperature);
-  
-  if (DHT.temperature > relay1_on_temp) {
-    digitalWrite(Relay1, LOW);
-    Serial.print(" - Turning Relay 1 ON");
-  } else if (DHT.temperature < relay1_off_temp) {
-    digitalWrite(Relay1, HIGH);
-    Serial.print(" - Turning Relay 1 OFF at %d degrees C");
-  } else {
-    Serial.print(" - I'm toasty warm");
+  int temp = DHT.temperature;
+
+  if (temp > 0 && temp < 60) {
+    if (temp > relay1_on_temp) {
+      if (digitalRead(Relay1) == HIGH) {
+        digitalWrite(Relay1, LOW);
+        Serial.print(temp);
+        Serial.print(" - Turning Relay 1 ON");
+        //Tell MySQL
+        char SQL_SEND_READINGS[] = "INSERT INTO iansmi9_ard.log_relays VALUES (NULL, CURRENT_TIMESTAMP, '1', '1')";
+        my_conn.cmd_query(SQL_SEND_READINGS);
+      }
+    } 
+    else if (temp < 21) { //relay1_off_temp
+      if (digitalRead(Relay1) == LOW) {
+        digitalWrite(Relay1, HIGH);
+        Serial.print(temp);
+        Serial.print(" - Turning Relay 1 OFF");
+        //Tell MySQL
+        char SQL_SEND_READINGS[] = "INSERT INTO iansmi9_ard.log_relays VALUES (NULL, CURRENT_TIMESTAMP, '1', '0')";
+        my_conn.cmd_query(SQL_SEND_READINGS);
+      }
+    } 
+    /*else {
+     Serial.print(" - I'm toasty warm");
+     }*/
+    Serial.println();
+  } 
+  else {
+    Serial.print("OUTLYING TEMPERATURE - "); 
+    Serial.println(temp);
   }
-  Serial.println();
 }
-
-
-
-
-
 
 
