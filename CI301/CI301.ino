@@ -115,6 +115,7 @@ void loop() {
     sendReadings(4, DHT.humidity, DHT.temperature);
     relaySwitch();
     break;
+  }
 }
 
 
@@ -287,7 +288,7 @@ void relaySwitch() {
         Serial.print(temp);
         Serial.print(" - Turning Relay 1 ON");
         //Tell MySQL
-        char SQL_SEND_READINGS[] = "INSERT INTO iansmi9_ard.log_relays VALUES (NULL, CURRENT_TIMESTAMP, '1', '1')";
+        char SQL_SEND_READINGS[] = "INSERT INTO iansmi9_ard.log_relays VALUES (NULL, CURRENT_TIMESTAMP, '1', '1');";
         my_conn.cmd_query(SQL_SEND_READINGS);
       }
     } 
@@ -297,7 +298,7 @@ void relaySwitch() {
         Serial.print(temp);
         Serial.print(" - Turning Relay 1 OFF");
         //Tell MySQL
-        char SQL_SEND_READINGS[] = "INSERT INTO iansmi9_ard.log_relays VALUES (NULL, CURRENT_TIMESTAMP, '1', '0')";
+        char SQL_SEND_READINGS[] = "INSERT INTO iansmi9_ard.log_relays VALUES (NULL, CURRENT_TIMESTAMP, '1', '0');";
         my_conn.cmd_query(SQL_SEND_READINGS);
       }
     } 
