@@ -19,7 +19,7 @@
 dht DHT;
 
 int scheduler = 0;
-int web_priority = 10000; // 1000 is one second
+int web_priority = 32700; // 10000 is around 13 seconds. Max 32750 = 40 seconds
 
 //Sensor Nicknames
 String dht1NN = "Ambient Soil";
