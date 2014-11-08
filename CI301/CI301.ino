@@ -113,7 +113,7 @@ void loop() {
     sendReadings(4, DHT.humidity, DHT.temperature);
   case 5:
     relaySwitch();
-    
+    delay(10000);
   }
 
 }
