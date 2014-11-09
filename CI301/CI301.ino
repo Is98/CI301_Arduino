@@ -125,6 +125,7 @@ void WebServer() {
             client.println("<html>");
             client.println("<head>");
             client.println("<title>Environment Live Times</title>");
+            client.println("<link rel=\"shortcut icon\" type=\"image/x-icon\" href=\"http://arduino.cc/en/favicon.png\" />");
             //and CSS style data...
             client.println("<style type=\"text/css\">");
             client.println("container {");
