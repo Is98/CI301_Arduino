@@ -103,7 +103,7 @@ void WebServer() {
     // listen for incoming clients
     EthernetClient client = server.available();
     if (client) {
-      Serial.println("new client");
+      Serial.println();
       // an http request ends with a blank line
       boolean currentLineIsBlank = true;
       while (client.connected()) {
@@ -155,6 +155,15 @@ void WebServer() {
 
             // output the value of each sensor
 
+            DHT.read11(pin_dht[0]);
+            client.print("<reading><h1>");
+            client.print(dhtNN[0]);
+            client.print("</h1> <br /> Humidity <br /> ");
+            client.print(DHT.humidity);
+            client.print("%.  <br /><br />   Temperature <br /> ");
+            client.print(DHT.temperature);
+            client.println("C </reading>");      
+
             DHT.read11(pin_dht[1]);
             client.print("<reading><h1>");
             client.print(dhtNN[1]);
@@ -162,7 +171,7 @@ void WebServer() {
             client.print(DHT.humidity);
             client.print("%.  <br /><br />   Temperature <br /> ");
             client.print(DHT.temperature);
-            client.println("C </reading>");      
+            client.println("C </reading>");    
 
             DHT.read11(pin_dht[2]);
             client.print("<reading><h1>");
@@ -176,15 +185,6 @@ void WebServer() {
             DHT.read11(pin_dht[3]);
             client.print("<reading><h1>");
             client.print(dhtNN[3]);
-            client.print("</h1> <br /> Humidity <br /> ");
-            client.print(DHT.humidity);
-            client.print("%.  <br /><br />   Temperature <br /> ");
-            client.print(DHT.temperature);
-            client.println("C </reading>");    
-
-            DHT.read11(pin_dht[4]);
-            client.print("<reading><h1>");
-            client.print(dhtNN[4]);
             client.print("</h1> <br /> Humidity <br /> ");
             client.print(DHT.humidity);
             client.print("%.  <br /><br />   Temperature <br /> ");
@@ -210,7 +210,6 @@ void WebServer() {
       delay(1);
       // close the connection:
       client.stop();
-      Serial.println("client disonnected");
     }
     delay(1);
   }
@@ -230,7 +229,8 @@ void sendReadings(int sensornum, int humidity, int temp) {
   /* char printf1[50];
    sprintf(printf1, "TRYING TO INSERT SQL TO '%d', '%d', '%d'", sensornum, humidity, temp);
    Serial.println(printf1); */
-  Serial.print("- SQL INSERT -");
+  Serial.print("SQL INSERT ");
+  Serial.print(sensornum);
 
   //build the query, correcting any variable usage/data type issues
   char SQL_SEND_READINGS[100];
@@ -250,13 +250,13 @@ void relaySwitch() {
   /* DHT.read11(relay1_dht);
    Serial.println(relay1_dht); */
 
-  DHT.read11(pin_dht[3]);
+  DHT.read11(pin_dht[2]);
   int temp = DHT.temperature;
 
   if (temp > 0 && temp < 60) {
     if (temp > relay1_on_temp) {
-      if (digitalRead(pin_relay[1]) == HIGH) {
-        digitalWrite(pin_relay[1], LOW);
+      if (digitalRead(pin_relay[0]) == HIGH) {
+        digitalWrite(pin_relay[0], LOW);
         Serial.print(temp);
         Serial.print(" - Turning Relay 1 ON");
         //Tell MySQL
@@ -265,8 +265,8 @@ void relaySwitch() {
       }
     } 
     else if (temp < 21) { //relay1_off_temp
-      if (digitalRead(pin_relay[1]) == LOW) {
-        digitalWrite(pin_relay[1], HIGH);
+      if (digitalRead(pin_relay[0]) == LOW) {
+        digitalWrite(pin_relay[0], HIGH);
         Serial.print(temp);
         Serial.print(" - Turning Relay 1 OFF");
         //Tell MySQL
