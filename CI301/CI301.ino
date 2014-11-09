@@ -81,24 +81,10 @@ void loop() {
   case 0:
     WebServer();
     break;
-  case 1:
-    DHT.read11(pin_dht[1]);
-    sendReadings(1, DHT.humidity, DHT.temperature);
-    relaySwitch();
-    break;
-  case 2:
-    DHT.read11(pin_dht[2]);
-    sendReadings(2, DHT.humidity, DHT.temperature);
-    relaySwitch();
-    break;
-  case 3:
-    DHT.read11(pin_dht[3]);
-    sendReadings(3, DHT.humidity, DHT.temperature);
-    relaySwitch();
-    break;
-  case 4:
-    DHT.read11(pin_dht[4]);
-    sendReadings(4, DHT.humidity, DHT.temperature);
+    
+  default:
+    DHT.read11(pin_dht[scheduler]);
+    sendReadings(scheduler, DHT.humidity, DHT.temperature);
     relaySwitch();
     break;
   }
