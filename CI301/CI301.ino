@@ -280,7 +280,7 @@ void relaySwitch() {
     Serial.println();
   } 
   else {
-    Serial.print("OUTLYING TEMPERATURE - "); 
+    Serial.print(" -- OUTLYING TEMPERATURE - "); 
     Serial.println(temp);
   }
 }
