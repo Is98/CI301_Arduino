@@ -83,8 +83,8 @@ void loop() {
     break;
     
   default:
-    DHT.read11(pin_dht[scheduler]);
-    sendReadings(scheduler, DHT.humidity, DHT.temperature);
+    DHT.read11(pin_dht[scheduler - 1]); //arrays start at [0], scheduler starts at 1
+    sendReadings(scheduler - 1, DHT.humidity, DHT.temperature);
     relaySwitch();
     break;
   }
