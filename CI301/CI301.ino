@@ -6,15 +6,12 @@
 #include "sha1.h"
 #include "mysql.h"
 
-#define dht1 A0 //no ; here. Set equal to channel sensor is on
-#define dht2 A1
-#define dht3 A2
-#define dht4 A3
-
-#define Relay1 2
-#define Relay2 3
-#define Relay3 4
-#define Relay4 5
+//Pin references 
+#define pin_relay[4] = {2,3,4,5}
+#define pin_dht[4] = {A0,A1,A2,A3} //no ; here. Set equal to channel sensor is on
+//Sensor nicknames
+String dhtNN[4] = {
+  "Ambient Soil", "Outer Hood", "Plant Top", "Plant Center"};
 
 dht DHT;
 
@@ -23,13 +20,6 @@ int previousScheduler = 4;
 int web_priority = 25000; // 10000 is around 13 seconds. Max 32750 = 40 seconds
 
 int relay1_on_temp = 23;
-
-
-//Sensor Nicknames
-String dht1NN = "Ambient Soil";
-String dht2NN = "Outer Hood";
-String dht3NN = "Plant Top";
-String dht4NN = "Plant Center";
 
 // Enter a MAC address and IP address for your controller below.
 // The IP address will be dependent on your local network:
@@ -57,14 +47,10 @@ void setup() {
     ; // wait for serial port to connect. Needed for Leonardo only
   }
 
-  pinMode(dht1, INPUT);
-  pinMode(dht2, INPUT);
-  pinMode(dht3, INPUT);
-  pinMode(dht4, INPUT);
-  pinMode(Relay1, OUTPUT);
-  pinMode(Relay2, OUTPUT);
-  pinMode(Relay3, OUTPUT);
-  pinMode(Relay4, OUTPUT);
+  for (int i=0; i < 4; i++) {
+    pinMode(pin_dht[i], INPUT);
+    pinMode(pin_relay[i], OUTPUT);
+  }
 
   // start the Ethernet connection and the server:
   Ethernet.begin(mac, addr_me);
@@ -83,7 +69,6 @@ void setup() {
   else  {
     Serial.println("Connection failed.");
   }
-
 }
 
 
@@ -96,22 +81,22 @@ void loop() {
     WebServer();
     break;
   case 1:
-    DHT.read11(dht1);
+    DHT.read11(pin_dht[1]);
     sendReadings(1, DHT.humidity, DHT.temperature);
     relaySwitch();
     break;
   case 2:
-    DHT.read11(dht2);
+    DHT.read11(pin_dht[2]);
     sendReadings(2, DHT.humidity, DHT.temperature);
     relaySwitch();
     break;
   case 3:
-    DHT.read11(dht3);
+    DHT.read11(pin_dht[3]);
     sendReadings(3, DHT.humidity, DHT.temperature);
     relaySwitch();
     break;
   case 4:
-    DHT.read11(dht4);
+    DHT.read11(pin_dht[4]);
     sendReadings(4, DHT.humidity, DHT.temperature);
     relaySwitch();
     break;
@@ -183,36 +168,36 @@ void WebServer() {
 
             // output the value of each sensor
 
-            DHT.read11(dht1);
+            DHT.read11(pin_dht[1]);
             client.print("<reading><h1>");
-            client.print(dht1NN);
+            client.print(dhtNN[1]);
             client.print("</h1> <br /> Humidity <br /> ");
             client.print(DHT.humidity);
             client.print("%.  <br /><br />   Temperature <br /> ");
             client.print(DHT.temperature);
             client.println("C </reading>");      
 
-            DHT.read11(dht2);
+            DHT.read11(pin_dht[2]);
             client.print("<reading><h1>");
-            client.print(dht2NN);
+            client.print(dhtNN[2]);
             client.print("</h1> <br /> Humidity <br /> ");
             client.print(DHT.humidity);
             client.print("%.  <br /><br />   Temperature <br /> ");
             client.print(DHT.temperature);
             client.println("C </reading>");    
 
-            DHT.read11(dht3);
+            DHT.read11(pin_dht[3]);
             client.print("<reading><h1>");
-            client.print(dht3NN);
+            client.print(dhtNN[3]);
             client.print("</h1> <br /> Humidity <br /> ");
             client.print(DHT.humidity);
             client.print("%.  <br /><br />   Temperature <br /> ");
             client.print(DHT.temperature);
             client.println("C </reading>");    
 
-            DHT.read11(dht4);
+            DHT.read11(pin_dht[4]);
             client.print("<reading><h1>");
-            client.print(dht4NN);
+            client.print(dhtNN[4]);
             client.print("</h1> <br /> Humidity <br /> ");
             client.print(DHT.humidity);
             client.print("%.  <br /><br />   Temperature <br /> ");
@@ -278,13 +263,13 @@ void relaySwitch() {
   /* DHT.read11(relay1_dht);
    Serial.println(relay1_dht); */
 
-  DHT.read11(dht3);
+  DHT.read11(pin_dht[3]);
   int temp = DHT.temperature;
 
   if (temp > 0 && temp < 60) {
     if (temp > relay1_on_temp) {
-      if (digitalRead(Relay1) == HIGH) {
-        digitalWrite(Relay1, LOW);
+      if (digitalRead(pin_relay[1]) == HIGH) {
+        digitalWrite(pin_relay[1], LOW);
         Serial.print(temp);
         Serial.print(" - Turning Relay 1 ON");
         //Tell MySQL
@@ -293,8 +278,8 @@ void relaySwitch() {
       }
     } 
     else if (temp < 21) { //relay1_off_temp
-      if (digitalRead(Relay1) == LOW) {
-        digitalWrite(Relay1, HIGH);
+      if (digitalRead(pin_relay[1]) == LOW) {
+        digitalWrite(pin_relay[1], HIGH);
         Serial.print(temp);
         Serial.print(" - Turning Relay 1 OFF");
         //Tell MySQL
@@ -312,6 +297,7 @@ void relaySwitch() {
     Serial.println(temp);
   }
 }
+
 
 
 
