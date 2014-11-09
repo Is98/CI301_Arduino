@@ -7,11 +7,11 @@
 #include "mysql.h"
 
 //Pin references 
-#define pin_relay[4] = {2,3,4,5}
-#define pin_dht[4] = {A0,A1,A2,A3} //no ; here. Set equal to channel sensor is on
+int pin_relay[] = {2,3,4,5};
+int pin_dht[] = {54,55,56,57}; //no ; here. Set equal to channel sensor is on {A0,A1,A2,A3}
+
 //Sensor nicknames
-String dhtNN[4] = {
-  "Ambient Soil", "Outer Hood", "Plant Top", "Plant Center"};
+String dhtNN[] = { "Ambient Soil", "Outer Hood", "Plant Top", "Plant Center"};
 
 dht DHT;
 
@@ -43,15 +43,16 @@ EthernetServer server(66);
 void setup() {
   // Open serial communications and wait for port to open:
   Serial.begin(9600);
+  
   while (!Serial) {
     ; // wait for serial port to connect. Needed for Leonardo only
   }
-
-  for (int i=0; i < 4; i++) {
-    pinMode(pin_dht[i], INPUT);
-    pinMode(pin_relay[i], OUTPUT);
+  
+  for (int j=0; j < 4; j++) {
+    pinMode(pin_dht[j], INPUT);
+    pinMode(pin_relay[j], OUTPUT);
   }
-
+  
   // start the Ethernet connection and the server:
   Ethernet.begin(mac, addr_me);
   server.begin();
