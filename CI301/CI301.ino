@@ -7,11 +7,14 @@
 #include "mysql.h"
 
 //Pin references 
-int pin_relay[] = {2,3,4,5};
-int pin_dht[] = {54,55,56,57}; //no ; here. Set equal to channel sensor is on {A0,A1,A2,A3}
+int pin_relay[] = {
+  2,3,4,5};
+int pin_dht[] = {
+  54,55,56,57}; //no ; here. Set equal to channel sensor is on {A0,A1,A2,A3}
 
 //Sensor nicknames
-String dhtNN[] = { "Ambient Soil", "Outer Hood", "Plant Top", "Plant Center"};
+String dhtNN[] = { 
+  "Ambient Soil", "Outer Hood", "Plant Top", "Plant Center"};
 
 dht DHT;
 
@@ -43,16 +46,16 @@ EthernetServer server(66);
 void setup() {
   // Open serial communications and wait for port to open:
   Serial.begin(9600);
-  
+
   while (!Serial) {
     ; // wait for serial port to connect. Needed for Leonardo only
   }
-  
+
   for (int j=0; j < 4; j++) {
     pinMode(pin_dht[j], INPUT);
     pinMode(pin_relay[j], OUTPUT);
   }
-  
+
   // start the Ethernet connection and the server:
   Ethernet.begin(mac, addr_me);
   server.begin();
@@ -81,7 +84,7 @@ void loop() {
   case 0:
     WebServer();
     break;
-    
+
   default:
     DHT.read11(pin_dht[scheduler - 1]); //arrays start at [0], scheduler starts at 1
     sendReadings(scheduler - 1, DHT.humidity, DHT.temperature);
@@ -114,42 +117,71 @@ void WebServer() {
           // character) and the line is blank, the http request has ended,
           // so you can send a reply
           if (c == '\n' && currentLineIsBlank) {
+            
             // send a standard http response header
             client.println("HTTP/1.1 200 OK");
             client.println("Content-Type: text/html");
             client.println("Connection: close");  // the connection will be closed after completion of the response
             client.println("Refresh: 60");  // refresh the page automatically every 5 sec
             client.println();
+            
             //and metadata...
             client.println("<!DOCTYPE HTML>");
             client.println("<html>");
             client.println("<head>");
             client.println("<title>Environment Live Times</title>");
             client.println("<link rel=\"shortcut icon\" type=\"image/x-icon\" href=\"http://arduino.cc/en/favicon.png\" />");
+            
+            //and google chart script...
+            client.println("<script type=\"text/javascript\" src=\"https://www.google.com/jsapi\"></script>");
+            client.println("<script type=\"text/javascript\">");
+            client.println("  google.load(\"visualization\", \"1\", {packages:[\"corechart\"]});");
+            client.println("  google.setOnLoadCallback(drawChart);");
+            client.println("  function drawChart() {");
+            client.println("    var data = google.visualization.arrayToDataTable([");
+            client.println("      ['Year', 'Sensor_1_Temp', 'Sensor_2_Temp', 'Sensor_3_Temp', 'Sensor_1_Temp'],");
+            client.println("      ['2004',      23,         26,       41],");
+            client.println("      ['2005',      23,         27,       40],");
+            client.println("      ['2006',      22,         27,       39],");
+            client.println("      ['2007',      23,         26,       38]");
+            client.println("    ]);");
+            client.println("");
+            client.println("    var options = {");
+            client.println("      title: 'Sensor Readings'");
+            client.println("    };");
+            client.println("");
+            client.println("    var chart = new google.visualization.LineChart(document.getElementById('chart_div'));");
+            client.println("");
+            client.println("    chart.draw(data, options);");
+            client.println("  }");
+            client.println("</script>");
+            client.println("");
+
             //and CSS style data...
             client.println("<style type=\"text/css\">");
             client.println("container {");
-            client.println("position: relative;");
-            client.println("width: 400px;");
-            client.println("margin-left:auto;");
-            client.println("margin-right:auto;");
+            client.println("  position: relative;");
+            client.println("  width: 400px;");
+            client.println("  margin-left:auto;");
+            client.println("  margin-right:auto;");
             client.println("}");
             client.println("reading {");
-            client.println("float: left;");
-            client.println("width: 100px;");
-            client.println("font-family: \"MS Serif\", \"New York\", serif;");
-            client.println("font-size: 12px;");
-            client.println("text-align: center;");
-            client.println("padding: 20px, 20px. 20px, 20px;");
+            client.println("  float: left;");
+            client.println("  width: 100px;");
+            client.println("  font-family: \"MS Serif\", \"New York\", serif;");
+            client.println("  font-size: 12px;");
+            client.println("  text-align: center;");
+            client.println("  padding: 20px, 20px. 20px, 20px;");
             client.println("}");
             client.println("reading h1 {");
-            client.println("font-family: Georgia, \"Times New Roman\", Times, serif;");
-            client.println("font-size: 14px;");
-            client.println("font-style: oblique;");
+            client.println("  font-family: Georgia, \"Times New Roman\", Times, serif;");
+            client.println("  font-size: 14px;");
+            client.println("  font-style: oblique;");
             client.println("}");
-
             client.println("</style>");
+            
             client.println("</head>");
+            
             //and body content.
             client.println("<body>");
             client.println("<container>");
@@ -190,7 +222,12 @@ void WebServer() {
             client.print(DHT.humidity);
             client.print("%.  <br /><br />   Temperature <br /> ");
             client.print(DHT.temperature);
-            client.println("C </reading>");    
+            client.println("C </reading>");  
+            
+            client.println("<br /><br />");
+            client.println("<div id=\"chart_div\" style=\"width: 900px; height: 500px;\"></div>");
+          
+            
             client.println("</container>");
 
             client.println("</body>");
@@ -285,6 +322,7 @@ void relaySwitch() {
     Serial.println(temp);
   }
 }
+
 
 
 
