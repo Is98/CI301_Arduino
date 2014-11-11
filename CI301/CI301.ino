@@ -18,16 +18,13 @@ String dhtNN[] = {
 
 dht DHT;
 
-int scheduler = 0;
-int previousScheduler = 4;
 int web_priority = 25000; // 10000 is around 13 seconds. Max 32750 = 40 seconds
 
 int relay1_on_temp = 23;
 
 // Enter a MAC address and IP address for your controller below.
 // The IP address will be dependent on your local network:
-byte mac[] = { 
-  0xDE, 0xAD, 0xBE, 0xEF, 0xFE, 0xED };
+byte mac[] = {0xDE, 0xAD, 0xBE, 0xEF, 0xFE, 0xED };
 IPAddress addr_me(192,168,0,66);
 IPAddress addr_mysql(198,23,57,27);
 
@@ -79,18 +76,9 @@ void setup() {
 
 void loop() {
 
-  switch (scheduler) {
-
-  case 0:
     WebServer();
-    break;
-
-  default:
-    DHT.read11(pin_dht[scheduler - 1]); //arrays start at [0], scheduler starts at 1
-    sendReadings(scheduler - 1, DHT.humidity, DHT.temperature);
+    sendReadings();
     relaySwitch();
-    break;
-  }
 }
 
 
@@ -117,21 +105,21 @@ void WebServer() {
           // character) and the line is blank, the http request has ended,
           // so you can send a reply
           if (c == '\n' && currentLineIsBlank) {
-            
+
             // send a standard http response header
             client.println("HTTP/1.1 200 OK");
             client.println("Content-Type: text/html");
             client.println("Connection: close");  // the connection will be closed after completion of the response
             client.println("Refresh: 60");  // refresh the page automatically every 5 sec
             client.println();
-            
+
             //and metadata...
             client.println("<!DOCTYPE HTML>");
             client.println("<html>");
             client.println("<head>");
             client.println("<title>Environment Live Times</title>");
             client.println("<link rel=\"shortcut icon\" type=\"image/x-icon\" href=\"http://arduino.cc/en/favicon.png\" />");
-            
+
             //and google chart script...
             client.println("<script type=\"text/javascript\" src=\"https://www.google.com/jsapi\"></script>");
             client.println("<script type=\"text/javascript\">");
@@ -139,11 +127,45 @@ void WebServer() {
             client.println("  google.setOnLoadCallback(drawChart);");
             client.println("  function drawChart() {");
             client.println("    var data = google.visualization.arrayToDataTable([");
-            client.println("      ['Year', 'Sensor_1_Temp', 'Sensor_2_Temp', 'Sensor_3_Temp', 'Sensor_1_Temp'],");
-            client.println("      ['2004',      23,         26,       41],");
-            client.println("      ['2005',      23,         27,       40],");
-            client.println("      ['2006',      22,         27,       39],");
-            client.println("      ['2007',      23,         26,       38]");
+            client.println("      ['Year', 'Sensor_1_Temp', 'Sensor_2_Temp', 'Sensor_3_Temp', 'Sensor_4_Temp'],");
+
+
+
+            // SELECT query for lookup value (1 row returned)
+            // Here we get a value from the database and use it.
+        /*    int temperature = 0;
+            char GETTEMP[];
+            sprintf(GETTEMP, "")
+            my_conn.cmd_query(QUERY_POP);
+            // We ignore the columns but we have to read them to get that data out of the queue
+            my_conn.get_columns();
+            // Now we read the rows.
+            row_values *row = NULL;
+            do {
+              row = my_conn.get_next_row();
+              // We use the first value returned in the row - population of NYC!
+              if (row != NULL) {
+                head_count = atol(row->values[0]);
+              }
+            } 
+            while (row != NULL);
+            // We're done with the buffers so Ok to clear them (and save precious memory).
+            my_conn.free_columns_buffer();
+            my_conn.free_row_buffer();
+            // Now, let's do something with the data.
+            Serial.print("NYC pop = ");
+            Serial.println(head_count);
+
+*/
+
+            /*
+             client.println("      ['2004',      23,         26,       41,       40],");
+             client.println("      ['2005',      23,         27,       40,       41],");
+             client.println("      ['2006',      22,         27,       39,       42],");
+             client.println("      ['2007',      23,         26,       38,       40]");
+             */
+
+
             client.println("    ]);");
             client.println("");
             client.println("    var options = {");
@@ -179,9 +201,9 @@ void WebServer() {
             client.println("  font-style: oblique;");
             client.println("}");
             client.println("</style>");
-            
+
             client.println("</head>");
-            
+
             //and body content.
             client.println("<body>");
             client.println("<container>");
@@ -223,11 +245,11 @@ void WebServer() {
             client.print("%.  <br /><br />   Temperature <br /> ");
             client.print(DHT.temperature);
             client.println("C </reading>");  
-            
+
             client.println("<br /><br />");
-            client.println("<div id=\"chart_div\" style=\"width: 900px; height: 500px;\"></div>");
-          
-            
+            client.println("<div id=\"chart_div\" style=\"width: 900px; height: 500px; position: absolute; top: 200px;\"></div>");
+
+
             client.println("</container>");
 
             client.println("</body>");
@@ -249,12 +271,7 @@ void WebServer() {
       // close the connection:
       client.stop();
     }
-    delay(1);
   }
-  if (previousScheduler == 4) {
-    previousScheduler = 0;
-  }
-  scheduler = previousScheduler + 1;
 }
 
 
@@ -262,24 +279,24 @@ void WebServer() {
 
 
 
-void sendReadings(int sensornum, int humidity, int temp) { 
+void sendReadings() { 
   //tell the serial monitor what we're doing.
-  /* char printf1[50];
-   sprintf(printf1, "TRYING TO INSERT SQL TO '%d', '%d', '%d'", sensornum, humidity, temp);
-   Serial.println(printf1); */
-  Serial.print("SQL INSERT ");
-  Serial.print(sensornum);
-
+  Serial.println(" SQL INSERT ");
+  
+  int sensorvalue[8];
+  //fill the sensorvalue array
+  for (int i=0; i < 4; i++) {
+    DHT.read11(pin_dht[i]);
+    sensorvalue[i*2] = DHT.humidity;
+    sensorvalue[(i*2)+1] = DHT.temperature;
+  }
   //build the query, correcting any variable usage/data type issues
   char SQL_SEND_READINGS[100];
-  sprintf(SQL_SEND_READINGS, "INSERT INTO iansmi9_ard.log VALUES (NULL, CURRENT_TIMESTAMP, '%d', '%d', '%d')", sensornum, humidity, temp);
+  sprintf(SQL_SEND_READINGS, "INSERT INTO iansmi9_ard.log VALUES (NULL, CURRENT_TIMESTAMP, '%d', '%d', '%d',  '%d', '%d', '%d',  '%d', '%d')", 
+        sensorvalue[0], sensorvalue[1], sensorvalue[2], sensorvalue[3], sensorvalue[4], sensorvalue[5], sensorvalue[6], sensorvalue[7]);
 
   /* run the SQL query */
   my_conn.cmd_query(SQL_SEND_READINGS);
-
-  //increment scheduler
-  previousScheduler = scheduler;
-  scheduler = 0;
 }
 
 
@@ -322,6 +339,7 @@ void relaySwitch() {
     Serial.println(temp);
   }
 }
+
 
 
 
