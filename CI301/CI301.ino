@@ -38,7 +38,7 @@ Connector my_conn; // The Connector reference
 // Initialize the Ethernet server library
 // with the IP address and port you want to use 
 // (port 80 is default for HTTP):
-EthernetServer server(66);
+EthernetServer server(80);
 
 void setup() {
   // Open serial communications and wait for port to open:
