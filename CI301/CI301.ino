@@ -20,7 +20,8 @@ dht DHT;
 
 int web_priority = 25000; // 10000 is around 13 seconds. Max 32750 = 40 seconds
 
-int relay1_on_temp = 23;
+int relay1_desired = 23;
+int relay1_tolerance = 1;
 
 // Enter a MAC address and IP address for your controller below.
 // The IP address will be dependent on your local network:
@@ -70,12 +71,13 @@ void setup() {
   else  {
     Serial.println("Connection failed.");
   }
+  
+  digitalWrite(pin_relay[0], HIGH);
 }
 
 
 
 void loop() {
-
     WebServer();
     sendReadings();
     relaySwitch();
@@ -119,7 +121,7 @@ void WebServer() {
             client.println("<head>");
             client.println("<title>Environment Live Times</title>");
             client.println("<link rel=\"shortcut icon\" type=\"image/x-icon\" href=\"http://arduino.cc/en/favicon.png\" />");
-
+/*
             //and google chart script...
             client.println("<script type=\"text/javascript\" src=\"https://www.google.com/jsapi\"></script>");
             client.println("<script type=\"text/javascript\">");
@@ -156,7 +158,7 @@ void WebServer() {
             Serial.print("NYC pop = ");
             Serial.println(head_count);
 
-*/
+
 
             /*
              client.println("      ['2004',      23,         26,       41,       40],");
@@ -165,7 +167,7 @@ void WebServer() {
              client.println("      ['2007',      23,         26,       38,       40]");
              */
 
-
+            /*
             client.println("    ]);");
             client.println("");
             client.println("    var options = {");
@@ -178,6 +180,7 @@ void WebServer() {
             client.println("  }");
             client.println("</script>");
             client.println("");
+            */
 
             //and CSS style data...
             client.println("<style type=\"text/css\">");
@@ -247,7 +250,7 @@ void WebServer() {
             client.println("C </reading>");  
 
             client.println("<br /><br />");
-            client.println("<div id=\"chart_div\" style=\"width: 900px; height: 500px; position: absolute; top: 200px;\"></div>");
+           // client.println("<div id=\"chart_div\" style=\"width: 900px; height: 500px; position: absolute; top: 200px;\"></div>");
 
 
             client.println("</container>");
@@ -307,11 +310,11 @@ void relaySwitch() {
 
   DHT.read11(pin_dht[2]);
   int temp = DHT.temperature;
-
+Serial.println(temp);
   if (temp > 0 && temp < 60) {
-    if (temp > relay1_on_temp) {
-      if (digitalRead(pin_relay[0]) == HIGH) {
-        digitalWrite(pin_relay[0], LOW);
+    if (temp >  21) { //(relay1_desired + relay1_tolerance)
+      if (digitalRead(pin_relay[0]) == LOW) {
+        digitalWrite(pin_relay[0], HIGH);
         Serial.print(temp);
         Serial.print(" - Turning Relay 1 ON");
         //Tell MySQL
@@ -319,9 +322,9 @@ void relaySwitch() {
         my_conn.cmd_query(SQL_SEND_READINGS);
       }
     } 
-    else if (temp < 21) { //relay1_off_temp
-      if (digitalRead(pin_relay[0]) == LOW) {
-        digitalWrite(pin_relay[0], HIGH);
+    else if (temp < 23 ) { //relay1_off_temp (relay1_desired - relay1_tolerance)
+      if (digitalRead(pin_relay[0]) == HIGH) {
+        digitalWrite(pin_relay[0], LOW);
         Serial.print(temp);
         Serial.print(" - Turning Relay 1 OFF");
         //Tell MySQL
@@ -329,9 +332,9 @@ void relaySwitch() {
         my_conn.cmd_query(SQL_SEND_READINGS);
       }
     } 
-    /*else {
+    else {
      Serial.print(" - I'm toasty warm");
-     }*/
+    }
     Serial.println();
   } 
   else {
