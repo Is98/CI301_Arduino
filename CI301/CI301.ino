@@ -22,18 +22,15 @@ String dhtNN[] = {
 dht DHT;
 
 
-long priority_web = 1000000; // 500,000 = ~41 secs
-int priority_send = 1;
-int priority_switch = 25;
+long priority_web = 2000000;   // 10,000,000 = 15 minutes
+int priority_send = 1;          // 10 = 1.5 minutes = 90 secs
+int priority_switch = 10;       // 60 = every 15 seconds
 
 long allocation_time = priority_web;
 long allocation_send[1];
 long allocation_switch[25];
 
-int allocation_sendcount;
-int allocation_switchcount;
-
-int relay1_temp = 23;
+int relay1_temp = 24;
 int relay1_tolerance = 1;
 
 // Enter a MAC address and IP address for your controller below.
@@ -65,6 +62,8 @@ void setup() {
     ; // wait for serial port to connect. Needed for Leonardo only
   }
 
+  Serial.println();
+  
   Serial.print("Sending at time(s) ");
   for (int i=0; i < priority_send; i++) {
     allocation_send[i] = (allocation_time * (i+1) ) / priority_send;
@@ -97,19 +96,25 @@ void setup() {
   //Test mysql connection by adding a poweron record
   if (my_conn.mysql_connect(addr_mysql, 3306, user, password))
   {
-    delay(5);
+    delay(15);
     // run the SQL query
     my_conn.cmd_query(SQL_POWERON_TEST);
-    Serial.println("Power up query Success!");
+    Serial.println("Power up query success!");
   } 
   else  {
-    Serial.println("Connection failed.");
+    Serial.println("Connection failed. Retrying...");
+    setup();
   }
+  
+  Serial.println();
 }
 
 
 
 void loop() {
+  int allocation_sendcount = 0;
+  int allocation_switchcount = 0;
+  
   for (long timeslice = 0; timeslice < priority_web; timeslice++) 
   {
     WebServer();
@@ -117,8 +122,6 @@ void loop() {
     if (allocation_send[allocation_sendcount] == (timeslice + 1)) {
       sendReadings();
       allocation_sendcount++;
-      
-      
     }
     
     if (allocation_switch[allocation_switchcount] == (timeslice + 1)) {
@@ -127,8 +130,6 @@ void loop() {
     }
   }
 
-  allocation_sendcount = 0;
-  allocation_switchcount = 0;
 }
 
 
@@ -238,12 +239,7 @@ void WebServer() {
 
 
 void sendReadings() { 
-  //tell the serial monitor what we're doing.
-  /* char printf1[50];
-   sprintf(printf1, "TRYING TO INSERT SQL TO '%d', '%d', '%d'", sensornum, humidity, temp);
-   Serial.println(printf1); */
-  Serial.println(" SQL INSERT ");
-
+  
   int sensorvalue[8];
   //fill the sensorvalue array
   for (int i=0; i < 4; i++) {
@@ -266,8 +262,6 @@ void sendReadings() {
 
 void relaySwitch() {
 
-  //Serial.println("Switch?");
-
   DHT.read11(pin_dht[2]);
   int temp = DHT.temperature;
 
@@ -280,6 +274,7 @@ void relaySwitch() {
         //Tell MySQL
         char SQL_SEND_READINGS[] = "INSERT INTO iansmi9_ard.log_relays VALUES (NULL, CURRENT_TIMESTAMP, '1', '1');";
         my_conn.cmd_query(SQL_SEND_READINGS);
+        Serial.println();
       }
     } 
     else if (temp < (relay1_temp - relay1_tolerance) ) { //relay1_off_temp
@@ -290,18 +285,17 @@ void relaySwitch() {
         //Tell MySQL
         char SQL_SEND_READINGS[] = "INSERT INTO iansmi9_ard.log_relays VALUES (NULL, CURRENT_TIMESTAMP, '1', '0');";
         my_conn.cmd_query(SQL_SEND_READINGS);
+        Serial.println();
       }
     } 
     /*else {
      Serial.print(" - I'm toasty warm");
      }*/
-    Serial.println();
   } 
   else {
     Serial.print(" -- OUTLYING TEMPERATURE - "); 
     Serial.println(temp);
   }
 }
-
 
 
