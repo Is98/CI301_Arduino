@@ -21,7 +21,18 @@ String dhtNN[] = {
 
 dht DHT;
 
-long web_priority = 2000000; // 500,000 = ~41 secs
+
+long priority_web = 1000000; // 500,000 = ~41 secs
+int priority_send = 1;
+int priority_switch = 25;
+
+long allocation_time = priority_web;
+long allocation_send[1];
+long allocation_switch[25];
+
+int allocation_sendcount;
+int allocation_switchcount;
+
 int relay1_temp = 23;
 int relay1_tolerance = 1;
 
@@ -45,6 +56,8 @@ Connector my_conn; // The Connector reference
 EthernetServer server(80);
 
 void setup() {
+  
+  
   // Open serial communications and wait for port to open:
   Serial.begin(115200);
 
@@ -52,6 +65,23 @@ void setup() {
     ; // wait for serial port to connect. Needed for Leonardo only
   }
 
+  Serial.print("Sending at time(s) ");
+  for (int i=0; i < priority_send; i++) {
+    allocation_send[i] = (allocation_time * (i+1) ) / priority_send;
+    Serial.print(allocation_send[i]);
+    Serial.print(", ");
+  }
+  Serial.println();
+  
+  Serial.print("Switching at time(s) ");
+  for (int i=0; i < priority_switch; i++) {
+    allocation_switch[i] = (allocation_time * (i+1) ) / priority_switch;
+    Serial.print(allocation_switch[i]);
+    Serial.print(", ");
+  }
+  Serial.println();
+  Serial.println();
+  
   for (int j=0; j < 4; j++) {
     pinMode(pin_dht[j], INPUT);
     pinMode(pin_relay[j], OUTPUT);
@@ -80,15 +110,25 @@ void setup() {
 
 
 void loop() {
-  Serial.println("Broadcasting ! ");
-  for (long webtimeslice = 0; webtimeslice < web_priority; webtimeslice++) 
+  for (long timeslice = 0; timeslice < priority_web; timeslice++) 
   {
     WebServer();
+    
+    if (allocation_send[allocation_sendcount] == (timeslice + 1)) {
+      sendReadings();
+      allocation_sendcount++;
+      
+      
+    }
+    
+    if (allocation_switch[allocation_switchcount] == (timeslice + 1)) {
+      relaySwitch();
+      allocation_switchcount++;
+    }
   }
-  
-  sendReadings();
-  relaySwitch();
 
+  allocation_sendcount = 0;
+  allocation_switchcount = 0;
 }
 
 
