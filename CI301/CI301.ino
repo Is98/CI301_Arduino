@@ -83,8 +83,7 @@ void loop() {
     break;
     
   default:
-    DHT.read11(pin_dht[scheduler - 1]); //arrays start at [0], scheduler starts at 1
-    sendReadings(scheduler - 1, DHT.humidity, DHT.temperature);
+    sendReadings();
     relaySwitch();
     break;
   }
@@ -230,13 +229,21 @@ void sendReadings(int sensornum, int humidity, int temp) {
   /* char printf1[50];
    sprintf(printf1, "TRYING TO INSERT SQL TO '%d', '%d', '%d'", sensornum, humidity, temp);
    Serial.println(printf1); */
-  Serial.print("SQL INSERT ");
-  Serial.print(sensornum);
-
-  //build the query, correcting any variable usage/data type issues
+  Serial.println(" SQL INSERT ");
+  
+  int sensorvalue[8];
+  //fill the sensorvalue array
+  for (int i=0; i < 4; i++) {
+    DHT.read11(pin_dht[i]);
+    sensorvalue[i*2] = DHT.humidity;
+    sensorvalue[(i*2)+1] = DHT.temperature;
+  }
+  
+   //build the query, correcting any variable usage/data type issues
   char SQL_SEND_READINGS[100];
-  sprintf(SQL_SEND_READINGS, "INSERT INTO iansmi9_ard.log VALUES (NULL, CURRENT_TIMESTAMP, '%d', '%d', '%d')", sensornum, humidity, temp);
-
+  sprintf(SQL_SEND_READINGS, "INSERT INTO iansmi9_ard.log VALUES (NULL, CURRENT_TIMESTAMP, '%d', '%d', '%d',  '%d', '%d', '%d',  '%d', '%d')", 
+        sensorvalue[0], sensorvalue[1], sensorvalue[2], sensorvalue[3], sensorvalue[4], sensorvalue[5], sensorvalue[6], sensorvalue[7]);
+        
   /* run the SQL query */
   my_conn.cmd_query(SQL_SEND_READINGS);
 
@@ -256,8 +263,8 @@ void relaySwitch() {
 
   if (temp > 0 && temp < 60) {
     if (temp > relay1_on_temp) {
-      if (digitalRead(pin_relay[0]) == HIGH) {
-        digitalWrite(pin_relay[0], LOW);
+      if (digitalRead(pin_relay[0]) == LOW) {
+        digitalWrite(pin_relay[0], HIGH);
         Serial.print(temp);
         Serial.print(" - Turning Relay 1 ON");
         //Tell MySQL
@@ -266,8 +273,8 @@ void relaySwitch() {
       }
     } 
     else if (temp < 21) { //relay1_off_temp
-      if (digitalRead(pin_relay[0]) == LOW) {
-        digitalWrite(pin_relay[0], HIGH);
+      if (digitalRead(pin_relay[0]) == HIGH) {
+        digitalWrite(pin_relay[0], LOW);
         Serial.print(temp);
         Serial.print(" - Turning Relay 1 OFF");
         //Tell MySQL
