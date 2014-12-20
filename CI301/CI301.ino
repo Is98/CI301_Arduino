@@ -64,7 +64,7 @@ void setup() {
 
   Serial.println();
   
-  Serial.print("Sending at time(s) ");
+  Serial.print("Sending at time(s)   ");
   for (int i=0; i < priority_send; i++) {
     allocation_send[i] = (allocation_time * (i+1) ) / priority_send;
     Serial.print(allocation_send[i]);
@@ -170,25 +170,25 @@ void WebServer() {
 
           //and CSS style data...
           client.println("<style type=\"text/css\">");
-          client.println("container {");
-          client.println("position: relative;");
-          client.println("width: 400px;");
-          client.println("margin-left:auto;");
-          client.println("margin-right:auto;");
-          client.println("}");
-          client.println("reading {");
-          client.println("float: left;");
-          client.println("width: 100px;");
-          client.println("font-family: \"MS Serif\", \"New York\", serif;");
-          client.println("font-size: 12px;");
-          client.println("text-align: center;");
-          client.println("padding: 20px, 20px. 20px, 20px;");
-          client.println("}");
-          client.println("reading h1 {");
-          client.println("font-family: Georgia, \"Times New Roman\", Times, serif;");
-          client.println("font-size: 14px;");
-          client.println("font-style: oblique;");
-          client.println("}");
+          client.println("  container {");
+          client.println("    position: relative;");
+          client.println("    width: 400px;");
+          client.println("    margin-left:auto;");
+          client.println("    margin-right:auto;");
+          client.println("  }");
+          client.println("  reading {");
+          client.println("    float: left;");
+          client.println("    width: 100px;");
+          client.println("    font-family: \"MS Serif\", \"New York\", serif;");
+          client.println("    font-size: 12px;");
+          client.println("    text-align: center;");
+          client.println("    padding: 20px, 20px. 20px, 20px;");
+          client.println("  }");
+          client.println("  reading h1 {");
+          client.println("    font-family: Georgia, \"Times New Roman\", Times, serif;");
+          client.println("    font-size: 14px;");
+          client.println("    font-style: oblique;");
+          client.println("  }");
 
           client.println("</style>");
           client.println("</head>");
@@ -202,11 +202,11 @@ void WebServer() {
             DHT.read11(pin_dht[i]);
             client.print("<reading><h1>");
             client.print(dhtNN[i]);
-            client.print("</h1> <br /> Humidity <br /> ");
+            client.print("</h1><br />Humidity<br /> ");
             client.print(DHT.humidity);
-            client.print("%.  <br /><br />   Temperature <br /> ");
+            client.print("%.<br /><br />Temperature<br /> ");
             client.print(DHT.temperature);
-            client.println("C </reading>");   
+            client.println("C</reading>");   
           }
 
           client.println("</container>");
@@ -249,9 +249,10 @@ void sendReadings() {
   }
 
   //build the query, correcting any variable usage/data type issues
-  char SQL_SEND_READINGS[255];
-  sprintf(SQL_SEND_READINGS, "INSERT INTO iansmi9_ard.log VALUES (NULL, CURRENT_TIMESTAMP, '%d', '%d', '%d', '%d', '%d', '%d', '%d', '%d')", 
-  sensorvalue[0], sensorvalue[1], sensorvalue[2], sensorvalue[3], sensorvalue[4], sensorvalue[5], sensorvalue[6], sensorvalue[7]);
+  char SQL_SEND_READINGS[128];
+  sprintf(SQL_SEND_READINGS, "INSERT INTO iansmi9_ard.log VALUES (NULL, CURRENT_TIMESTAMP, '%d', '%d', '%d', '%d', '%d', '%d', '%d', '%d');", 
+  sensorvalue[0], sensorvalue[1], sensorvalue[2], sensorvalue[3], 
+  sensorvalue[4], sensorvalue[5], sensorvalue[6], sensorvalue[7]);
 
   /* run the SQL query */
   my_conn.cmd_query(SQL_SEND_READINGS);
