@@ -64,22 +64,22 @@ void setup() {
 
   Serial.println();
   
-  Serial.print("Sending at time(s)   ");
+  
   for (int i=0; i < priority_send; i++) {
     allocation_send[i] = (allocation_time * (i+1) ) / priority_send;
-    Serial.print(allocation_send[i]);
-    Serial.print(", ");
   }
-  Serial.println();
+  Serial.print("Sending every ");
+  Serial.print( allocation_send[0] /10000 );
+  Serial.println(" seconds");
   
-  Serial.print("Switching at time(s) ");
+  
   for (int i=0; i < priority_switch; i++) {
     allocation_switch[i] = (allocation_time * (i+1) ) / priority_switch;
-    Serial.print(allocation_switch[i]);
-    Serial.print(", ");
   }
-  Serial.println();
-  Serial.println();
+  Serial.print("Switching every ");
+  Serial.print( allocation_switch[0] /10000 );
+  Serial.println(" seconds");
+  
   
   for (int j=0; j < 4; j++) {
     pinMode(pin_dht[j], INPUT);
@@ -299,4 +299,6 @@ void relaySwitch() {
   }
 }
 
+
+//void RelaySendValue(int RelayPin, )
 
