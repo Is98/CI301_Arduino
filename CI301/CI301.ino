@@ -10,7 +10,6 @@
 #include "sha1.h"
 #include "mysql.h"
 
-#define PREFIX "/arduino"
 
 //Pin references
 int pin_dht[4] = {54, 55, 56, 57}; //{A0,A1,A2,A3}
@@ -23,11 +22,11 @@ boolean relayHeat[] = {0, 0, 0, 0};
 
 //Sensor nicknames
 char* dhtNN[4] = {
-  "Ambient Soil",       // DHT1
-  "Outer Hood",         // DHT2
-  "Plant Top",          // DHT3
-  "Plant Center"
-};     // DHT4
+  "Zone1 - A",       // DHT0
+  "Zone1 - B",         // DHT1
+  "Zone2 - C",          // DHT2
+  "Zone2 - D"        // DHT3
+}; 
 
 dht DHT;
 
@@ -35,10 +34,9 @@ long priority_web = 2000000;   // 10,000,000 = 15 minutes
 int priority_send = 10;          // 10 = 1.5 minutes = 90 secs
 int priority_switch = 100;       // 60 = every 15 seconds
 
-long allocation_time = priority_web;
-long allocation_send[1];
-long allocation_switch[25];
-
+Schedular setWeb;
+Schedular setMysql;
+Schedular setSend;
 
 
 // Enter a MAC address and IP address for your controller below.
@@ -59,95 +57,7 @@ Connector my_conn; // The Connector reference
 // Initialize the Ethernet server library
 // with the IP address and port you want to use
 // (port 80 is default for HTTP):
-/* This creates an instance of the webserver.  By specifying a prefix
-* of "", all pages will be at the root of the server. */
-#define PREFIX ""
 EthernetServer server(80);
-
-
-/*
-void privateCmd(WebServer &server, WebServer::ConnectionType type, char *, bool)
-{
-
-}
-*/
-
-
-/*
-void defaultCmd(WebServer &server, WebServer::ConnectionType type, char *, bool)
-{
-  server.httpSuccess();
-  if (type != WebServer::HEAD)
-  {
-    //P(helloMsg) = "<h1>Hello, World!</h1><a href=\"private.html\">Private page</a>";
-
-
-    // send a standard http response header
-    server.println("HTTP/1.1 200 OK");
-    server.println("Content-Type: text/html");
-    server.println("Connection: close");  // the connection will be closed after completion of the response
-    server.println("Refresh: 60");  // refresh the page automatically every 5 sec
-    server.println();
-
-    //and metadata...
-    server.println("<!DOCTYPE HTML>");
-    server.println("<html>");
-    server.println("<head>");
-    server.println("<title>Environment Live Times</title>");
-    server.println("<link rel=\"shortcut icon\" type=\"image/x-icon\" href=\"http://arduino.cc/en/favicon.png\" />");
-
-    //and CSS style data...
-    server.println("<style type=\"text/css\">");
-    server.println("  container {");
-    server.println("    position: relative;");
-    server.println("    width: 400px;");
-    server.println("    margin-left:auto;");
-    server.println("    margin-right:auto;");
-    server.println("  }");
-    server.println("  reading {");
-    server.println("    float: left;");
-    server.println("    width: 100px;");
-    server.println("    font-family: \"MS Serif\", \"New York\", serif;");
-    server.println("    font-size: 12px;");
-    server.println("    text-align: center;");
-    server.println("    padding: 20px, 20px. 20px, 20px;");
-    server.println("  }");
-    server.println("  reading h1 {");
-    server.println("    font-family: Georgia, \"Times New Roman\", Times, serif;");
-    server.println("    font-size: 14px;");
-    server.println("    font-style: oblique;");
-    server.println("  }");
-
-    server.println("</style>");
-    server.println("</head>");
-    //and body content.
-    server.println("<body>");
-    server.println("<container>");
-
-    // output the value of each sensor
-
-    for (int i = 0; i < 4; i++) {
-      DHT.read11(pin_dht[i]);
-      server.print("<reading><h1>");
-      server.print(dhtNN[i]);
-      server.print("</h1><br />Humidity<br /> ");
-      server.print(DHT.humidity);
-      server.print("%.<br /><br />Temperature<br /> ");
-      server.print(DHT.temperature);
-      server.println("C</reading>");
-    }
-
-    server.println("</container>");
-
-    server.println("</body>");
-    server.println("</html>");
-
-
-    //server.printP(helloMsg);
-  }
-} */
-
-
 
 void sendReadings() {
 
@@ -173,101 +83,107 @@ void sendReadings() {
 
 
 
-void relaySwitch(int i) {
+void relaySwitch() {
 
   //Serial.println("In RelaySwitch() ");
+  for (int i = 0; i < 4; i++) {
 
-  int DHTnum = i;
-  DHT.read11(pin_dht[DHTnum]);
-  int temp = DHT.temperature;
+    int DHTnum = i;
+    Serial.println(DHTnum);
+    DHT.read11(pin_dht[DHTnum]);
+    int temp = DHT.temperature;
 
 
-  if ((temp > 0 && temp < 60) && (temp != temps[DHTnum])) {
+    if ((temp > 0) && (temp < 60)) {
+      if (temp == temps[DHTnum]) {
+        break;
+      }
+      else if (dimmable[DHTnum]) {
+        int minimum_dim = 0;
+        //Tell MySQL
+        char SQL_SEND_READINGS[100];
+        sprintf(SQL_SEND_READINGS, "INSERT INTO iansmi9_ard.log_relays VALUES (NULL, CURRENT_TIMESTAMP, '%d', '2');", DHTnum);
+        my_conn.cmd_query(SQL_SEND_READINGS);
+        //Serial.println();
+        //Find the PWM value
+        double pwmNumerator = (double) (temp - (desired_temp[DHTnum] - (desired_tolerance[DHTnum] / 2)  ) );
+        double pwmDecimal = pwmNumerator / desired_tolerance[DHTnum];
+        if (pwmDecimal < 0) {
+          pwmDecimal = 0.00;
+        };
+        if (pwmDecimal > 1) {
+          pwmDecimal = 1.00;
+        };
+        //Serial.println(pwmDecimal);
+        //Serial.println(minimum_dim);
+        int pwmMaximum = (255 - minimum_dim);
+        //Serial.println(pwmMaximum);
+        double dim_component = pwmMaximum * pwmDecimal ;
+        //Serial.println(dim_component);
+        int pwmValue = (int) minimum_dim + dim_component;
+        //Serial.println(pwmValue);
 
-    if (dimmable[DHTnum]) {
-      int minimum_dim = 0;
-      //Tell MySQL
-      char SQL_SEND_READINGS[100];
-      sprintf(SQL_SEND_READINGS, "INSERT INTO iansmi9_ard.log_relays VALUES (NULL, CURRENT_TIMESTAMP, '%d', '2');", DHTnum);
-      my_conn.cmd_query(SQL_SEND_READINGS);
-      //Serial.println();
-      //Find the PWM value
-      double pwmNumerator = (double) (temp - (desired_temp[DHTnum] - (desired_tolerance[DHTnum] / 2)  ) );
-      double pwmDecimal = pwmNumerator / desired_tolerance[DHTnum];
-      if (pwmDecimal < 0) {
-        pwmDecimal = 0.00;
-      };
-      if (pwmDecimal > 1) {
-        pwmDecimal = 1.00;
-      };
-      //Serial.println(pwmDecimal);
-      //Serial.println(minimum_dim);
-      int pwmMaximum = (255 - minimum_dim);
-      //Serial.println(pwmMaximum);
-      double dim_component = pwmMaximum * pwmDecimal ;
-      //Serial.println(dim_component);
-      int pwmValue = (int) minimum_dim + dim_component;
-      //Serial.println(pwmValue);
-
-      //Write this to arduino 2
-      char toSend[12];
-      sprintf(toSend, "#%d %03d$", DHTnum, pwmValue);
-      Serial.write(toSend);
-      //Tell Serial monitor
-      char toTell[36];
-      sprintf(toTell, "   Sensor %d has temperature %3d! PWM: %d!", DHTnum, temp, pwmValue);
-      Serial.println(toTell);
-      temps[i] = temp;
+        //Write this to arduino 2
+        char toSend[12];
+        sprintf(toSend, "#%d %03d$", DHTnum, pwmValue);
+        Serial.write(toSend);
+        //Tell Serial monitor
+        char toTell[36];
+        sprintf(toTell, "   Sensor %d has temperature %3d! PWM: %d!", DHTnum, temp, pwmValue);
+        Serial.println(toTell);
+        temps[i] = temp;
+      }
+      else if ((!dimmable) && (temp > (desired_temp[DHTnum] + ((int) (desired_tolerance[DHTnum] / 2)) )) ) {
+        //Tell MySQL
+        //build the query, correcting any variable usage/data type issues
+        char SQL_SEND_READINGS[88];
+        sprintf(SQL_SEND_READINGS,
+                "INSERT INTO iansmi9_ard.log_relays VALUES (NULL, CURRENT_TIMESTAMP, '%d', '1');", DHTnum);
+        /* run the SQL query */
+        my_conn.cmd_query(SQL_SEND_READINGS);
+        Serial.println(SQL_SEND_READINGS);
+        //Write this to arduino 2
+        char toSend[7];
+        sprintf(toSend, "#%d 255$", DHTnum);
+        Serial.write(toSend);
+        //Tell Serial Monitor
+        Serial.print("Too high on sensor: ");
+        Serial.print(DHTnum);
+        Serial.println(".");
+        Serial.print(temp);
+        Serial.print(" - Turning Cooling ON - ");
+        Serial.println(DHTnum);
+        temps[i] = temp;
+      }
+      else if ((!dimmable) && (temp < (desired_temp[DHTnum] - ((int) (desired_tolerance[DHTnum] / 2)) )) ) {
+        //Tell MySQL
+        char SQL_SEND_READINGS[88];
+        sprintf(SQL_SEND_READINGS,
+                "INSERT INTO iansmi9_ard.log_relays VALUES (NULL, CURRENT_TIMESTAMP, '%d', '0');", DHTnum);
+        /* run the SQL query */
+        my_conn.cmd_query(SQL_SEND_READINGS);
+        Serial.println(SQL_SEND_READINGS);
+        //Write this to arduino 2
+        char toSend[7];
+        sprintf(toSend, "#%d 000$", DHTnum);
+        Serial.write(toSend);
+        //Tell Serial Monitor
+        Serial.print("Too low on sensor: ");
+        Serial.print(i);
+        Serial.println(".");
+        Serial.print(temp);
+        Serial.print(" - Turning Cooling OFF - ");
+        Serial.println(DHTnum);
+        temps[i] = temp;
+      }
     }
-    else if ((!dimmable) && (temp > (desired_temp[DHTnum] + ((int) (desired_tolerance[DHTnum] / 2)) )) ) {
-      //Tell MySQL
-      //build the query, correcting any variable usage/data type issues
-      char SQL_SEND_READINGS[88];
-      sprintf(SQL_SEND_READINGS,
-              "INSERT INTO iansmi9_ard.log_relays VALUES (NULL, CURRENT_TIMESTAMP, '%d', '1');", DHTnum);
-      /* run the SQL query */
-      my_conn.cmd_query(SQL_SEND_READINGS);
-      Serial.println(SQL_SEND_READINGS);
-      //Write this to arduino 2
-      char toSend[7];
-      sprintf(toSend, "#%d 255$", DHTnum);
-      Serial.write(toSend);
-      //Tell Serial Monitor
-      Serial.print("Too high on sensor: ");
-      Serial.print(DHTnum);
-      Serial.println(".");
-      Serial.print(temp);
-      Serial.print(" - Turning Cooling ON - ");
-      Serial.println(DHTnum);
-      temps[i] = temp;
-    }
-    else if ((!dimmable) && (temp < (desired_temp[DHTnum] - ((int) (desired_tolerance[DHTnum] / 2)) )) ) {
-      //Tell MySQL
-      char SQL_SEND_READINGS[88];
-      sprintf(SQL_SEND_READINGS,
-              "INSERT INTO iansmi9_ard.log_relays VALUES (NULL, CURRENT_TIMESTAMP, '%d', '0');", DHTnum);
-      /* run the SQL query */
-      my_conn.cmd_query(SQL_SEND_READINGS);
-      Serial.println(SQL_SEND_READINGS);
-      //Write this to arduino 2
-      char toSend[7];
-      sprintf(toSend, "#%d 000$", DHTnum);
-      Serial.write(toSend);
-      //Tell Serial Monitor
-      Serial.print("Too low on sensor: ");
-      Serial.print(i);
-      Serial.println(".");
-      Serial.print(temp);
-      Serial.print(" - Turning Cooling OFF - ");
-      Serial.println(DHTnum);
-      temps[i] = temp;
+    else {
+      Serial.print(" -- OUTLYING TEMPERATURE - ");
+      Serial.println(temp);
     }
   }
-  else if (! ( temp > 0 && temp < 60)) {
-    Serial.print(" -- OUTLYING TEMPERATURE - ");
-    Serial.println(temp);
-  }
 
+  Serial.println("");
 }
 
 
@@ -325,66 +241,21 @@ void setup() {
 
   Serial.println();
 
-  for (int i = 0; i < priority_send; i++) {
-    allocation_send[i] = (allocation_time * (i + 1) ) / priority_send;
-  }
-
-  Serial.print("Sending every ");
-  Serial.print( allocation_send[0] / 10000 );
-  Serial.println(" seconds");
-
-  for (int i = 0; i < priority_switch; i++) {
-    allocation_switch[i] = (allocation_time * (i + 1) ) / priority_switch;
-  }
-
-  Serial.print("Switching every ");
-  Serial.print( allocation_switch[0] / 10000 );
-  Serial.println(" seconds");
-  Serial.println();
-
   for (int j = 0; j < 4; j++) {
     pinMode(pin_dht[j], INPUT);
   }
 
-
-
+  setWeb.start();
+  setMysql.start();
+  setSend.start();
 }
 
 
 
 void loop() {
-  for (int i = 0; i < 0; i++);
-  {
-    //Serial.println("Inside LOOP");
-    int allocation_sendcount = 0;
-    int allocation_switchcount = 0;
-
-    for (long timeslice = 0; timeslice < priority_web; timeslice++)
-    {
-      WebServer();
-
-      if (allocation_send[allocation_sendcount] == (timeslice + 1)) {
-        sendReadings();
-        allocation_sendcount++;
-      }
-
-      if (allocation_switch[allocation_switchcount] == (timeslice + 1)) {
-        relaySwitch(0);
-        relaySwitch(1);
-        relaySwitch(2);
-        relaySwitch(3);
-        allocation_switchcount++;
-      }
-      /*
-        char buff[64];
-        int len = 64;
-
-        // process incoming connections one at a time forever
-        webserver.processConnection(buff, &len);
-      */
-    }
-
-  }
+  setWeb.check(WebServer, 1000);
+  setSend.check(relaySwitch, 10000);
+  setMysql.check(sendReadings, 30000);
 }
 
 
@@ -396,6 +267,12 @@ void WebServer() {
 
   // listen for incoming clients
   EthernetClient client = server.available();
+
+  if (server.available() ) {
+    Serial.println("Server AVAILABLE");
+  } else {
+    Serial.print(".");
+  }
 
   if (client) {
     Serial.println("new client");
@@ -427,7 +304,9 @@ void WebServer() {
           client.println("<style type=\"text/css\">");
           client.println("  container {");
           client.println("    position: relative;");
-          client.println("    width: 400px;");
+          client.println("    width: 500px;");
+          client.println("    float: left;");
+          client.println("    margin-bottom: 25px;");
           client.println("    margin-left:auto;");
           client.println("    margin-right:auto;");
           client.println("  }");
@@ -439,32 +318,105 @@ void WebServer() {
           client.println("    text-align: center;");
           client.println("    padding: 20px, 20px. 20px, 20px;");
           client.println("  }");
-          client.println("  reading h1 {");
+          client.println("  reading H1 {");
           client.println("    font-family: Georgia, \"Times New Roman\", Times, serif;");
           client.println("    font-size: 14px;");
           client.println("    font-style: oblique;");
           client.println("  }");
-
+          client.println("  relay {");
+          client.println("    position: relative;");
+          client.println("    float: left;");
+          client.println("    width: 100px;");
+          client.println("    font-family: \"MS Serif\", \"New York\", serif;");
+          client.println("    font-size: 12px;");
+          client.println("    text-align: center;");
+          client.println("    padding: 20px, 20px. 20px, 20px;");
+          client.println("  }");
+          client.println("  relay H1 {");
+          client.println("    font-family: Georgia, \"Times New Roman\", Times, serif;");
+          client.println("    font-size: 14px;");
+          client.println("    font-style: oblique;");
+          client.println("  }");
+          client.println("");
           client.println("</style>");
           client.println("</head>");
           //and body content.
           client.println("<body>");
-          client.println("<container>");
+          client.println("  <container>");
 
           // output the value of each sensor
 
           for (int i = 0; i < 4; i++) {
             DHT.read11(pin_dht[i]);
-            client.print("<reading><h1>");
+            client.print("    <reading><h1>");
             client.print(dhtNN[i]);
             client.print("</h1><br />Humidity<br /> ");
             client.print(DHT.humidity);
             client.print("%.<br /><br />Temperature<br /> ");
             client.print(DHT.temperature);
             client.println("C</reading>");
-          }
+          };
 
-          client.println("</container>");
+          client.println("  </container> <br /> ");
+          client.println("  <container>");
+          
+          client.println("<form name = \"form\" method = \"post\" action = \"\">");
+
+          for (int i = 0; i < 4; i++) {
+            client.print("<relay><H1>Relay ");
+            client.print(i);
+            client.print(" :");
+            client.println(" </H1> <p>");
+            client.println("    Temp Desired <br />");
+            client.print("    <input type=\"text\" name=\"relay");
+            client.print(i);
+            client.print("_desired\" id=\"relay");
+            client.print(i);
+            client.println("_desired\" style=\"width: 90px; \" >");
+            client.println("    <br />");
+            client.println("    <br />");
+            client.println("    Temp Tolerance <br />");
+            client.print("    <input type=\"text\" name=\"relay");
+            client.print(i);
+            client.print("_tolerance\" id=\"relay");
+            client.print(i);
+            client.println("_desired\" style=\"width: 90px; \" >");
+            client.println("    <br />");
+            client.println("    <br />");
+            client.println("    DHT Monitored");
+            client.print("     <select name=\"relay");
+            client.print(i);
+            client.print("_dht\" id=\"relay");
+            client.print(i);
+            client.println("_dht\" style=\"width: 90px; \" >");
+            client.println("       <option value=\"1\">DHT1</option>");
+            client.println("       <option value=\"2\">DHT2</option>");
+            client.println("       <option value=\"3\">DHT3</option>");
+            client.println("       <option value=\"4\">DHT4</option>");
+            client.println("     </select>");
+            client.println("      <br />");
+            client.println("    <br /> Dimmable <br /> ");
+            client.println("    Yes?");
+            client.print("    <input type=\"radio\" name=\"radio\" id=\"relay");
+            client.print(i);
+            client.print("_dimmable\" value=\"dimmable");
+            client.print(i);
+            client.println("\">");
+            client.println("<br />");
+            client.println("    <br /> Cooling? <br /> ");
+            client.println("    Yes?");
+            client.print("    <input type=\"radio\" name=\"radio\" id=\"relay");
+            client.print(i);
+            client.print("_cooling\" value=\"cooling");
+            client.print(i);
+            client.println("\">");
+            client.println("<br />");
+            client.println("  </p>");
+            client.println("</relay>");
+            client.println("");
+          };
+          client.println("  </form>");
+          client.println("  </container>");
 
           client.println("</body>");
           client.println("</html>");
