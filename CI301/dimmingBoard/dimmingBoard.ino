@@ -1,7 +1,7 @@
 
 //main board = 0;
 //relays are at 6, 7, 8, 9;
-int relayPins[4] = {6, 7, 8, 9};
+int relayPins[4] = {6, 9, 10, 11};
 
 void setup() {
   Serial.begin(115200);
