@@ -15,7 +15,7 @@ boolean dimmable[] = {0, 0, 0, 0};
 int desired_temp[] = {25, 25, 25, 25};
 int desired_tolerance[] = {0, 0, 0, 0} ;
 boolean relayHeat[] = {0, 0, 0, 0};
-//int minimum_dim[] = {0, 0, 0, 0}; //0 - 255
+int minimum_dim[] = {0, 0, 0, 0}; //0 - 255
 
 //Sensor nicknames
 char* dhtNN[4] = {
@@ -168,6 +168,20 @@ void WebServer() {
           client.println("<link rel=\"shortcut icon\" type=\"image/x-icon\" href=\"http://arduino.cc/en/favicon.png\" />");
 
           client.println(" <script type=\"text/javascript\" src=\"https://www.google.com/jsapi?autoload={'modules':[{ 'name':'visualization', 'version':'1', 'packages':['corechart'] }]}\"></script>");
+        /*
+                    // if (my_conn.mysql_connect(addr_mysql, 3306, user, password)) {
+                    //   delay(10);
+                    my_conn.cmd_query("SELECT * FROM iansmi9_ard.log");
+                    my_conn.show_results();
+
+                    // We're done with the buffers so Ok to clear them (and save precious memory).
+                    my_conn.free_columns_buffer();
+                    my_conn.free_row_buffer();
+                    // }
+                    // else {
+                    //   Serial.println("Connection failed.");
+                    // }
+        */
 
           client.println("  <script type=\"text/javascript\">");
           client.println("    google.setOnLoadCallback(drawChart);");
@@ -414,7 +428,7 @@ void relaySwitch() {
         //Serial.println(pwmMaximum);
         double dim_component = pwmMaximum * pwmDecimal;
         //Serial.println(dim_component);
-        int pwmValue = (int) minimum_dim + dim_component;
+        int pwmValue = (int) ((minimum_dim + dim_component) );
         //If heater then warm rather than cool.
         if (relayHeat[i] == 1) {
           pwmValue = 255 - pwmValue;
