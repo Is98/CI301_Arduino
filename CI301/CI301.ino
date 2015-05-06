@@ -1,8 +1,6 @@
 #include <EasyScheduler.h>
-
 #include <dht.h>
 
-//#include <stdio.h>
 #include <SPI.h>
 #include <Ethernet.h>
 
@@ -13,9 +11,9 @@
 //Pin references
 int pin_dht[4] = {54, 55, 56, 57}; //{A0,A1,A2,A3}
 int temps[4] = {0, 0, 0, 0};
-boolean dimmable[] = {1, 1, 1, 1};
-int desired_temp[] = {24, 24, 24, 24};
-int desired_tolerance[] = {4, 4, 4, 4} ;
+boolean dimmable[] = {0, 0, 0, 0};
+int desired_temp[] = {25, 25, 25, 25};
+int desired_tolerance[] = {0, 0, 0, 0} ;
 boolean relayHeat[] = {0, 0, 0, 0};
 //int minimum_dim[] = {0, 0, 0, 0}; //0 - 255
 
@@ -117,9 +115,9 @@ void setup() {
 
 
 void loop() {
-  setWeb.check(WebServer, 1);
-  setSend.check(relaySwitch, 1000);
-  setMysql.check(sendReadings, 1800000); //half hour
+  setWeb.check(WebServer, 10);
+  setSend.check(relaySwitch, 10000);
+  setMysql.check(sendReadings, 18000000);
 }
 
 
@@ -133,7 +131,7 @@ void WebServer() {
   EthernetClient client = server.available();
 
   if (server.available() ) {
-    Serial.println("Server AVAILABLE");
+    Serial.println("CLIENT AVAILABLE");
   } else {
     Serial.print(".");
   }
@@ -149,25 +147,25 @@ void WebServer() {
         // if you've gotten to the end of the line (received a newline
         // character) and the line is blank, the http request has ended,
         // so you can send a reply
-        
+
         if (c == '?'  && currentLineIsBlank) {
           Serial.println("QUESTION MARK!??!?!?!?!");
-        } 
+        }
         else if (c == '\n' && currentLineIsBlank) {
-/*
-          // if (my_conn.mysql_connect(addr_mysql, 3306, user, password)) {
-          //   delay(10);
-          my_conn.cmd_query("SELECT * FROM iansmi9_ard.log");
-          my_conn.show_results();
+          /*
+                    // if (my_conn.mysql_connect(addr_mysql, 3306, user, password)) {
+                    //   delay(10);
+                    my_conn.cmd_query("SELECT * FROM iansmi9_ard.log");
+                    my_conn.show_results();
 
-          // We're done with the buffers so Ok to clear them (and save precious memory).
-          my_conn.free_columns_buffer();
-          my_conn.free_row_buffer();
-          // }
-          // else {
-          //   Serial.println("Connection failed.");
-          // }
-*/
+                    // We're done with the buffers so Ok to clear them (and save precious memory).
+                    my_conn.free_columns_buffer();
+                    my_conn.free_row_buffer();
+                    // }
+                    // else {
+                    //   Serial.println("Connection failed.");
+                    // }
+          */
 
 
           // send a standard http response header
@@ -199,7 +197,7 @@ void WebServer() {
           client.println("      ]);");
           client.println(" ");
           client.println("      var options = {");
-          client.println("        title: 'Company Performance',");
+          client.println("        title: 'Temperature History!',");
           client.println("        curveType: 'function',");
           client.println("        legend: { position: 'bottom' }");
           client.println("      };");
@@ -270,7 +268,7 @@ void WebServer() {
 
           client.println("  </container> <br /> ");
           client.println("<form name = \"form\" method = \"post\" action = \"?test:test1;key:value;\">");
-          
+
           client.println("  <container>");
 
 
@@ -316,7 +314,7 @@ void WebServer() {
             client.println("       <option value=\"0\">NO!</option>");
             client.println("       <option value=\"1\">YES!</option>");
             client.println("     </select>");
-            
+
             client.println("<br />");
             client.println("    <br /> Cooling? <br /> ");
             client.print("     <select name=\"relay");
@@ -327,17 +325,17 @@ void WebServer() {
             client.println("       <option value=\"0\">Heating</option>");
             client.println("       <option value=\"1\">Cooling</option>");
             client.println("     </select>");
-            
+
             client.println("<br />");
             client.println("  </p>");
             client.println("</relay>");
             client.println("");
           };
-          
+
           client.println("  </container>");
           client.println("  <input name=\"btnSubmit\" type=\"submit\" style=\"width: 400px;\">");
           client.println("  </form>");
-          
+
           client.println("  <container>");
           client.println("    <!--Div that will hold the pie chart-->");
           client.println("    <div id=\"curve_chart\" style=\"width: 100%; height: 100%;\"></div>");
@@ -432,8 +430,10 @@ void relaySwitch() {
         double dim_component = pwmMaximum * pwmDecimal;
         //Serial.println(dim_component);
         int pwmValue = (int) minimum_dim + dim_component;
-        //Serial.println(pwmValue);
-
+        //If heater then warm rather than cool.
+        if (relayHeat[i] == 1) {
+          pwmValue = 255 - pwmValue;
+        }
         //Write this to arduino 2
         char toSend[12];
         sprintf(toSend, "#%d %03d$", DHTnum, pwmValue);
@@ -444,7 +444,7 @@ void relaySwitch() {
         Serial.println(toTell);
         temps[i] = temp;
       }
-      else if ((!dimmable) && (temp > (desired_temp[DHTnum] + ((int) (desired_tolerance[DHTnum] / 2)) )) ) {
+      else if ((!dimmable[DHTnum]) && (temp > (desired_temp[DHTnum] + ((int) (desired_tolerance[DHTnum] / 2)) )) ) {
         //Tell MySQL
         //build the query, correcting any variable usage/data type issues
         char SQL_SEND_READINGS[88];
@@ -453,20 +453,22 @@ void relaySwitch() {
         /* run the SQL query */
         my_conn.cmd_query(SQL_SEND_READINGS);
         Serial.println(SQL_SEND_READINGS);
+        int pwmValue = 0;
+        //If heater then warm rather than cool.
+        if (relayHeat[i] == 1) {
+          pwmValue = 255;
+        }
         //Write this to arduino 2
         char toSend[7];
-        sprintf(toSend, "#%d 255$", DHTnum);
+        sprintf(toSend, "#%d %03d$", DHTnum, pwmValue);
         Serial.write(toSend);
-        //Tell Serial Monitor
-        Serial.print("Too high on sensor: ");
-        Serial.print(DHTnum);
-        Serial.println(".");
-        Serial.print(temp);
-        Serial.print(" - Turning Cooling ON - ");
-        Serial.println(DHTnum);
+        //Tell Serial monitor
+        char toTell[36];
+        sprintf(toTell, "   Sensor %d has temperature %3d! PWM: %03d!", DHTnum, temp, pwmValue);
+        Serial.println(toTell);
         temps[i] = temp;
       }
-      else if ((!dimmable) && (temp < (desired_temp[DHTnum] - ((int) (desired_tolerance[DHTnum] / 2)) )) ) {
+      else if ((!dimmable[DHTnum]) && (temp < (desired_temp[DHTnum] - ((int) (desired_tolerance[DHTnum] / 2)) )) ) {
         //Tell MySQL
         char SQL_SEND_READINGS[88];
         sprintf(SQL_SEND_READINGS,
@@ -474,20 +476,22 @@ void relaySwitch() {
         /* run the SQL query */
         my_conn.cmd_query(SQL_SEND_READINGS);
         Serial.println(SQL_SEND_READINGS);
+        int pwmValue = 0;
+        //If heater then warm rather than cool.
+        if (relayHeat[i] == 1) {
+          pwmValue = 255;
+        }
         //Write this to arduino 2
         char toSend[7];
-        sprintf(toSend, "#%d 000$", DHTnum);
+        sprintf(toSend, "#%d %03d$", DHTnum, pwmValue);
         Serial.write(toSend);
-        //Tell Serial Monitor
-        Serial.print("Too low on sensor: ");
-        Serial.print(i);
-        Serial.println(".");
-        Serial.print(temp);
-        Serial.print(" - Turning Cooling OFF - ");
-        Serial.println(DHTnum);
+        //Tell Serial monitor
+        char toTell[36];
+        sprintf(toTell, "   Sensor %d has temperature %3d! PWM: %03d!", DHTnum, temp, pwmValue);
+        Serial.println(toTell);
         temps[i] = temp;
       }
-      else {
+      else if ((temp < 0) && (temp > 60)) {
         Serial.print(" -- OUTLYING TEMPERATURE - ");
         Serial.println(temp);
       }
