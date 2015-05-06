@@ -152,22 +152,7 @@ void WebServer() {
           Serial.println("QUESTION MARK!??!?!?!?!");
         }
         else if (c == '\n' && currentLineIsBlank) {
-          /*
-                    // if (my_conn.mysql_connect(addr_mysql, 3306, user, password)) {
-                    //   delay(10);
-                    my_conn.cmd_query("SELECT * FROM iansmi9_ard.log");
-                    my_conn.show_results();
-
-                    // We're done with the buffers so Ok to clear them (and save precious memory).
-                    my_conn.free_columns_buffer();
-                    my_conn.free_row_buffer();
-                    // }
-                    // else {
-                    //   Serial.println("Connection failed.");
-                    // }
-          */
-
-
+          
           // send a standard http response header
           client.println("HTTP/1.1 200 OK");
           client.println("Content-Type: text/html");
