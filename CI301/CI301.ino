@@ -12,10 +12,10 @@
 int pin_dht[4] = {54, 55, 56, 57}; //{A0,A1,A2,A3}
 int temps[4] = {0, 0, 0, 0};
 boolean dimmable[] = {0, 0, 0, 0};
-int desired_temp[] = {25, 25, 25, 25};
-int desired_tolerance[] = {0, 0, 0, 0} ;
-boolean relayHeat[] = {0, 0, 0, 0};
-//int minimum_dim[] = {0, 0, 0, 0}; //0 - 255
+int desired_temp[] = {18, 18, 18, 18};
+int desired_tolerance[] = {1, 1, 1, 1} ;
+boolean relayHeat[] = {0, 0, 1, 1};
+int minimum_dim[] = {0, 0, 0, 0}; //0 - 255
 
 //Sensor nicknames
 char* dhtNN[4] = {
@@ -168,6 +168,20 @@ void WebServer() {
           client.println("<link rel=\"shortcut icon\" type=\"image/x-icon\" href=\"http://arduino.cc/en/favicon.png\" />");
 
           client.println(" <script type=\"text/javascript\" src=\"https://www.google.com/jsapi?autoload={'modules':[{ 'name':'visualization', 'version':'1', 'packages':['corechart'] }]}\"></script>");
+        /*
+                    // if (my_conn.mysql_connect(addr_mysql, 3306, user, password)) {
+                    //   delay(10);
+                    my_conn.cmd_query("SELECT * FROM iansmi9_ard.log");
+                    my_conn.show_results();
+
+                    // We're done with the buffers so Ok to clear them (and save precious memory).
+                    my_conn.free_columns_buffer();
+                    my_conn.free_row_buffer();
+                    // }
+                    // else {
+                    //   Serial.println("Connection failed.");
+                    // }
+        */
 
           client.println("  <script type=\"text/javascript\">");
           client.println("    google.setOnLoadCallback(drawChart);");
@@ -249,6 +263,7 @@ void WebServer() {
             client.print("%.<br /><br />Temperature<br /> ");
             client.print(DHT.temperature);
             client.println("C</reading>");
+            
           };
 
           client.println("  </container> <br /> ");
@@ -389,11 +404,8 @@ void relaySwitch() {
     DHT.read11(pin_dht[DHTnum]);
     int temp = DHT.temperature;
 
-
     if ((temp > 0) && (temp < 60) && (temp != temps[DHTnum])) {
-
       if (dimmable[DHTnum]) {
-        int minimum_dim = 0;
         //Tell MySQL
         char SQL_SEND_READINGS[100];
         sprintf(SQL_SEND_READINGS, "INSERT INTO iansmi9_ard.log_relays VALUES (NULL, CURRENT_TIMESTAMP, '%d', '2');", DHTnum);
@@ -402,22 +414,29 @@ void relaySwitch() {
         //Find the PWM value
         double pwmNumerator = (double) (temp - (desired_temp[DHTnum] - (desired_tolerance[DHTnum] / 2)  ) );
         double pwmDecimal = pwmNumerator / desired_tolerance[DHTnum];
+        //check for over and under 1 and 0
         if (pwmDecimal < 0) {
           pwmDecimal = 0.00;
-        };
-        if (pwmDecimal > 1) {
+        } else if (pwmDecimal > 1) {
           pwmDecimal = 1.00;
         };
         //Serial.println(pwmDecimal);
         //Serial.println(minimum_dim);
-        int pwmMaximum = (255 - minimum_dim);
+        int pwmMaximum = (255 - minimum_dim[i]);
         //Serial.println(pwmMaximum);
         double dim_component = pwmMaximum * pwmDecimal;
         //Serial.println(dim_component);
-        int pwmValue = (int) minimum_dim + dim_component;
+        int pwmValue = ((minimum_dim[DHTnum]) + ((int) dim_component) );
         //If heater then warm rather than cool.
         if (relayHeat[i] == 1) {
-          pwmValue = 255 - pwmValue;
+          Serial.println("Heating Value");
+          pwmValue = (255 + minimum_dim[DHTnum]) - pwmValue;
+        }
+        //if sensor needs to be off, then ignore minimum_dim
+        if ((pwmDecimal == 0.00) && (relayHeat[i] == 0) ) {
+          pwmValue = 0;
+        } else if ((pwmDecimal == 1.00) && (relayHeat[i] == 1)) {
+          pwmValue = 0;
         }
         //Write this to arduino 2
         char toSend[12];
@@ -433,8 +452,14 @@ void relaySwitch() {
         //Tell MySQL
         //build the query, correcting any variable usage/data type issues
         char SQL_SEND_READINGS[88];
+        boolean newstate;
+        if (relayHeat[DHTnum] == 0) {
+          newstate = 0;
+        } else {
+          newstate = 1;
+        }
         sprintf(SQL_SEND_READINGS,
-                "INSERT INTO iansmi9_ard.log_relays VALUES (NULL, CURRENT_TIMESTAMP, '%d', '1');", DHTnum);
+                "INSERT INTO iansmi9_ard.log_relays VALUES (NULL, CURRENT_TIMESTAMP, '%d', '%d');", DHTnum, newstate);
         /* run the SQL query */
         my_conn.cmd_query(SQL_SEND_READINGS);
         Serial.println(SQL_SEND_READINGS);
@@ -456,8 +481,14 @@ void relaySwitch() {
       else if ((!dimmable[DHTnum]) && (temp < (desired_temp[DHTnum] - ((int) (desired_tolerance[DHTnum] / 2)) )) ) {
         //Tell MySQL
         char SQL_SEND_READINGS[88];
+        boolean newstate;
+        if (relayHeat[DHTnum] == 0) {
+          newstate = 1;
+        } else {
+          newstate = 0;
+        }
         sprintf(SQL_SEND_READINGS,
-                "INSERT INTO iansmi9_ard.log_relays VALUES (NULL, CURRENT_TIMESTAMP, '%d', '0');", DHTnum);
+                "INSERT INTO iansmi9_ard.log_relays VALUES (NULL, CURRENT_TIMESTAMP, '%d', '%d');", DHTnum, newstate);
         /* run the SQL query */
         my_conn.cmd_query(SQL_SEND_READINGS);
         Serial.println(SQL_SEND_READINGS);
@@ -479,6 +510,10 @@ void relaySwitch() {
       else if ((temp < 0) && (temp > 60)) {
         Serial.print(" -- OUTLYING TEMPERATURE - ");
         Serial.println(temp);
+      }
+      else {
+        Serial.println("In tolerance - not switching");
+        temps[i] = temp;
       }
     }
 
